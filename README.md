@@ -8,7 +8,7 @@ It is designed for interview excerpts, field notes, open-ended survey responses,
 
 ![screenshot](demo.gif)
 
-- Run local named entity recognition using spaCy.
+- Run local named entity recognition using spaCy (small or large) or CamemBERT (development mode).
 - Highlight detected entities in the text.
 - Review detected categories such as people, locations, organizations, dates, emails, phone numbers, URLs, and miscellaneous entities.
 - Choose which entity categories should be replaced.
@@ -36,7 +36,7 @@ This is a research prototype.
 - The app does not guarantee complete anonymization.
 - Researchers should manually review the anonymized output for missed identifiers and indirect re-identification risks.
 - The current packaged release is macOS only.
-- The model used is the French spaCy model: `fr_core_news_sm`.
+- The packaged release bundles the French spaCy small model (`fr_core_news_sm`). In development you can choose small, large, or CamemBERT.
 
 ## Releases
 
@@ -57,13 +57,24 @@ Install JavaScript dependencies:
 npm install
 ```
 
-Create the local Python environment for development:
+Create the local Python environment for development.
+
+Use **Python 3.12** — PyTorch (required for the CamemBERT backend) does not publish wheels for Python 3.13 yet.
 
 ```bash
-python3 -m venv .venv
+python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m spacy download fr_core_news_sm
+.venv/bin/python -m spacy download fr_core_news_lg
 ```
+
+For the optional CamemBERT NER backend, also install (pins `transformers` 4.x for compatibility with the available PyTorch build):
+
+```bash
+.venv/bin/pip install -r requirements-camembert.txt
+```
+
+The first CamemBERT run downloads `Jean-Baptiste/camembert-ner` from Hugging Face (~400 MB). Restart the app after installing CamemBERT dependencies so the NER service reloads.
 
 Run the app in development mode:
 
@@ -89,6 +100,67 @@ Generated release files are written to:
 
 ```bash
 release/
+```
+
+## Export to Label Studio
+
+After running NER, use **Export to Label Studio** to download:
+
+- `label-studio-ner-YYYY-MM-DD.json` — one task with `predictions` (pre-annotations) for span labeling
+- `label-studio-ner-config.xml` — paste into **Settings → Labeling Interface** when creating the project
+
+In Label Studio:
+
+1. Create a project and paste the XML labeling config.
+2. **Import** the JSON file (Upload Files).
+3. Open tasks — detected spans appear as pre-annotations to accept, edit, or extend.
+
+Export opens a save dialog for the JSON file and writes `label-studio-ner-config.xml` in the same folder.
+
+Entity labels map to: Person, Location, Organization, Date, Email, Phone, URL, Misc.
+
+## Anonymization report from Label Studio export
+
+After refining annotations in Label Studio, export the project as JSON and run:
+
+```bash
+.venv/bin/python scripts/anonymization_report.py path/to/export.json -o anonymization-report.md --anonymized anonymized.txt
+```
+
+Options:
+
+- `--include Person,Location` — replace only these categories
+- `--exclude Misc` — keep a category unchanged
+- `--task-id 1` — process a single task from a multi-task export
+
+The script reads finalized `annotations` (falling back to `predictions` if needed) and writes a markdown audit report plus optional anonymized text using placeholders such as `[PERSON_1]`, `[LOCATION_1]`.
+
+In the app, use **Batch from Label Studio** to pick an input folder of JSON exports and an output folder. Each task produces `*-report.md` and `*-anonymized.txt`, plus `batch-summary.json`.
+
+## Batch text folder
+
+Use the **Batch text folder** panel in the app to process every `.txt`, `.md`, or `.text` file in a directory:
+
+1. Choose which entity categories to anonymize.
+2. Select the NER backend in the toolbar.
+3. Click **Process text folder** and choose input/output directories.
+
+Output per source file (`.txt` / `.text` only):
+
+- `{name}-anonymized.txt`
+- `{name}-report.md`
+- `{name}-label-studio.json`
+
+Use a **separate output folder** from your source texts. If you pick the same folder, results go to `anonymized-results/` automatically. Prior output files (`*-anonymized.txt`, `*-report.md`) are never re-processed as input.
+
+Command line:
+
+```bash
+.venv/bin/python scripts/batch_anonymize_texts.py \
+  --input-dir ./texts \
+  --output-dir ./output \
+  --backend spacy-lg \
+  --categories person,location,organization,email
 ```
 
 ## Privacy Note

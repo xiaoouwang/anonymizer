@@ -1,4 +1,8 @@
 import { useMemo, useState } from "react";
+import {
+  createLabelStudioExport,
+  LABEL_STUDIO_NER_CONFIG,
+} from "./labelStudioExport.js";
 
 const SAMPLE_TEXT = `Extrait d'entretien :
 
@@ -28,14 +32,27 @@ const CATEGORY_PREFIXES = {
   misc: "ENTITY",
 };
 
+const NER_BACKENDS = {
+  "spacy-sm": "spaCy French small (fr_core_news_sm)",
+  "spacy-lg": "spaCy French large (fr_core_news_lg)",
+  camembert: "CamemBERT NER (Jean-Baptiste/camembert-ner)",
+};
+
+const INITIAL_BATCH_CATEGORIES = Object.fromEntries(
+  Object.keys(CATEGORY_LABELS).map((category) => [category, true]),
+);
+
 export default function App() {
   const [text, setText] = useState(SAMPLE_TEXT);
   const [entities, setEntities] = useState([]);
   const [modelName, setModelName] = useState(null);
+  const [nerBackend, setNerBackend] = useState("spacy-lg");
   const [selectedCategories, setSelectedCategories] = useState({});
   const [reportOpen, setReportOpen] = useState(false);
   const [isDetecting, setIsDetecting] = useState(false);
-  const [status, setStatus] = useState("Paste text, then run spaCy NER.");
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+  const [batchCategories, setBatchCategories] = useState(INITIAL_BATCH_CATEGORIES);
+  const [status, setStatus] = useState("Paste text, choose a NER backend, then run detection.");
   const [error, setError] = useState("");
 
   const groupedEntities = useMemo(() => groupEntities(entities), [entities]);
@@ -62,14 +79,16 @@ export default function App() {
   async function detectEntities() {
     setError("");
     setIsDetecting(true);
-    setStatus("Running local spaCy detection. The first run can take 20-40 seconds while the model warms up...");
+    setStatus(
+      `Running ${NER_BACKENDS[nerBackend]}. The first run can take 20-60 seconds while the model warms up...`,
+    );
 
     try {
       if (!window.nerApi) {
         throw new Error("Electron preload API is unavailable. Start the app with npm run dev.");
       }
 
-      const result = await window.nerApi.detectEntities(text);
+      const result = await window.nerApi.detectEntities(text, nerBackend);
       const normalized = normalizeEntities(result.entities || []);
       const categorySelection = Object.fromEntries(
         [...new Set(normalized.map((entity) => entity.label))].map((label) => [label, true]),
@@ -78,7 +97,16 @@ export default function App() {
       setEntities(normalized);
       setSelectedCategories(categorySelection);
       setModelName(result.model);
-      setStatus(`Detected ${normalized.length} unique entities using ${result.model}.`);
+      const uniqueCount = Object.values(
+        normalized.reduce((groups, entity) => {
+          const key = `${entity.label}:${entity.text.toLocaleLowerCase()}`;
+          groups[key] = true;
+          return groups;
+        }, {}),
+      ).length;
+      setStatus(
+        `Detected ${normalized.length} entities (${uniqueCount} unique value${uniqueCount === 1 ? "" : "s"}) using ${result.model} (${nerBackend}).`,
+      );
     } catch (caughtError) {
       setError(caughtError.message);
       setStatus("Detection failed.");
@@ -109,11 +137,140 @@ export default function App() {
     setStatus("Audit report downloaded.");
   }
 
+  async function downloadLabelStudioExport() {
+    const exportData = createLabelStudioExport({
+      text,
+      entities,
+      modelName,
+      nerBackend,
+    });
+    const stamp = new Date().toISOString().slice(0, 10);
+    const jsonContent = JSON.stringify(exportData, null, 2);
+    const defaultBaseName = `label-studio-ner-${stamp}`;
+
+    try {
+      if (!window.nerApi?.exportLabelStudio) {
+        throw new Error("Export API unavailable.");
+      }
+
+      const result = await window.nerApi.exportLabelStudio({
+        jsonContent,
+        configContent: LABEL_STUDIO_NER_CONFIG,
+        defaultBaseName,
+      });
+
+      if (result.canceled) {
+        setStatus("Label Studio export canceled.");
+        return;
+      }
+
+      setStatus(
+        `Exported ${entities.length} pre-annotations and config to ${result.jsonPath} and ${result.configPath}.`,
+      );
+    } catch {
+      downloadFile(jsonContent, `${defaultBaseName}.json`, "application/json;charset=utf-8");
+      setStatus(
+        `Exported ${entities.length} annotations. Restart the app to also save the labeling config file.`,
+      );
+    }
+  }
+
+  async function batchAnonymizeFromLabelStudio() {
+    setError("");
+
+    if (!window.nerApi?.batchAnonymizeLabelStudio) {
+      setError("Batch anonymization is only available in the Electron app.");
+      return;
+    }
+
+    setIsBatchProcessing(true);
+    setStatus("Choose the folder with Label Studio JSON exports...");
+
+    try {
+      const result = await window.nerApi.batchAnonymizeLabelStudio();
+
+      if (result.canceled) {
+        setStatus("Batch anonymization canceled.");
+        return;
+      }
+
+      const errorCount = result.errors?.length || 0;
+      const errorNote =
+        errorCount > 0 ? ` ${errorCount} file(s) failed; see batch-summary.json.` : "";
+
+      setStatus(
+        `Processed ${result.tasks_processed} task(s) from ${result.json_files} JSON file(s) into ${result.output_dir}.${errorNote}`,
+      );
+    } catch (caughtError) {
+      setError(caughtError.message);
+      setStatus("Batch anonymization failed.");
+    } finally {
+      setIsBatchProcessing(false);
+    }
+  }
+
+  async function batchProcessTextFolder() {
+    setError("");
+
+    const categories = Object.entries(batchCategories)
+      .filter(([, selected]) => selected)
+      .map(([category]) => category);
+
+    if (!categories.length) {
+      setError("Select at least one entity category to anonymize.");
+      return;
+    }
+
+    if (!window.nerApi?.batchProcessTextFolder) {
+      setError("Batch text processing is only available in the Electron app.");
+      return;
+    }
+
+    setIsBatchProcessing(true);
+    setStatus("Choose the folder with text files to process...");
+
+    try {
+      const result = await window.nerApi.batchProcessTextFolder({
+        backend: nerBackend,
+        categories,
+      });
+
+      if (result.canceled) {
+        setStatus("Batch text processing canceled.");
+        return;
+      }
+
+      const errorCount = result.errors?.length || 0;
+      const errorNote =
+        errorCount > 0 ? ` ${errorCount} file(s) failed; see batch-summary.json.` : "";
+
+      const redirectNote = result.output_redirected
+        ? " Output was written to an anonymized-results/ subfolder because input and output were the same."
+        : "";
+
+      setStatus(
+        `Processed ${result.files_processed} text file(s) into ${result.output_dir}. Each file produced anonymized text, a report, and Label Studio JSON.${errorNote}${redirectNote}`,
+      );
+    } catch (caughtError) {
+      setError(caughtError.message);
+      setStatus("Batch text processing failed.");
+    } finally {
+      setIsBatchProcessing(false);
+    }
+  }
+
+  function toggleBatchCategory(category) {
+    setBatchCategories((current) => ({
+      ...current,
+      [category]: !current[category],
+    }));
+  }
+
   return (
     <main className="app">
       <header className="hero">
         <div>
-          <p className="eyebrow">Electron + React + local spaCy</p>
+          <p className="eyebrow">Electron + React + local NER</p>
           <h1>Qualitative Text Anonymizer</h1>
           <p>
             Paste interview excerpts, run local named entity recognition, review
@@ -124,21 +281,53 @@ export default function App() {
         <aside className="privacy-note">
           <strong>Local-first prototype</strong>
           <span>
-            Text is sent only to the local Python spaCy process. The app does not
+            Text is sent only to the local Python NER process. The app does not
             call external AI APIs or telemetry services.
           </span>
         </aside>
       </header>
 
       <section className="controls">
+        <label className="backend-select">
+          NER backend
+          <select
+            value={nerBackend}
+            onChange={(event) => {
+              setNerBackend(event.target.value);
+              setEntities([]);
+              setSelectedCategories({});
+              setModelName(null);
+              setStatus(`Backend set to ${NER_BACKENDS[event.target.value]}. Run detection again.`);
+            }}
+            disabled={isDetecting}
+          >
+            <option value="spacy-sm">{NER_BACKENDS["spacy-sm"]}</option>
+            <option value="spacy-lg">{NER_BACKENDS["spacy-lg"]}</option>
+            <option value="camembert">{NER_BACKENDS.camembert}</option>
+          </select>
+        </label>
         <button onClick={detectEntities} disabled={!text.trim() || isDetecting}>
-          {isDetecting ? "Detecting..." : "Run spaCy NER"}
+          {isDetecting ? "Detecting..." : "Run NER"}
         </button>
         <button onClick={copyAnonymizedText} disabled={!entities.length}>
           Copy anonymized text
         </button>
         <button onClick={() => setReportOpen(true)} disabled={!entities.length}>
           Show audit report
+        </button>
+        <button
+          className="secondary"
+          onClick={downloadLabelStudioExport}
+          disabled={!entities.length || isBatchProcessing}
+        >
+          Export to Label Studio
+        </button>
+        <button
+          className="secondary"
+          onClick={batchAnonymizeFromLabelStudio}
+          disabled={isDetecting || isBatchProcessing}
+        >
+          {isBatchProcessing ? "Processing..." : "Batch from Label Studio"}
         </button>
         <button
           className="secondary"
@@ -151,20 +340,64 @@ export default function App() {
             setStatus("Session cleared.");
             setError("");
           }}
+          disabled={isBatchProcessing}
         >
           Clear
         </button>
         <span className="status">{status}</span>
       </section>
 
+      <section className="batch-panel panel">
+        <div className="panel-header">
+          <div>
+            <h2>Batch text folder</h2>
+            <p className="batch-description">
+              Process every <code>.txt</code> or <code>.text</code> file in a folder.
+              Use a separate output folder (not the same as the source folder).
+            </p>
+          </div>
+          <button
+            onClick={batchProcessTextFolder}
+            disabled={isDetecting || isBatchProcessing}
+          >
+            {isBatchProcessing ? "Processing folder..." : "Process text folder"}
+          </button>
+        </div>
+        <div className="batch-categories">
+          <p className="batch-categories-label">Categories to anonymize</p>
+          <div className="batch-category-grid">
+            {Object.entries(CATEGORY_LABELS).map(([category, label]) => (
+              <label className="batch-category-toggle" key={category}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(batchCategories[category])}
+                  onChange={() => toggleBatchCategory(category)}
+                  disabled={isBatchProcessing}
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+          <p className="batch-output-note">
+            Output per file: <code>*-anonymized.txt</code>, <code>*-report.md</code>,{" "}
+            <code>*-label-studio.json</code>, plus shared <code>label-studio-ner-config.xml</code>.
+          </p>
+        </div>
+      </section>
+
       {error && (
         <section className="error-card">
-          <strong>spaCy setup needed</strong>
+          <strong>NER setup needed</strong>
           <p>{error}</p>
           <p>
-            Install Python dependencies with <code>pip install -r requirements.txt</code>,
-            then install a model such as{" "}
-            <code>python -m spacy download fr_core_news_sm</code>.
+            Install Python dependencies with <code>pip install -r requirements.txt</code>.
+            For spaCy, install French models with{" "}
+            <code>python -m spacy download fr_core_news_sm</code> and{" "}
+            <code>python -m spacy download fr_core_news_lg</code>.
+            For CamemBERT, also run{" "}
+            <code>pip install -r requirements-camembert.txt</code> (Python 3.12
+            required). The model downloads automatically on first use via Hugging
+            Face.
           </p>
         </section>
       )}
@@ -190,7 +423,11 @@ export default function App() {
         <div className="panel">
           <div className="panel-header">
             <h2>2. Replace Categories?</h2>
-            <span>{modelName ? `Model: ${modelName}` : "No model run yet"}</span>
+            <span>
+              {modelName
+                ? `Model: ${modelName} (${nerBackend})`
+                : `Backend: ${NER_BACKENDS[nerBackend]}`}
+            </span>
           </div>
           <CategoryReview
             groupedEntities={groupedEntities}
@@ -262,7 +499,7 @@ function CategoryReview({ groupedEntities, selectedCategories, onToggle }) {
   if (!categories.length) {
     return (
       <div className="empty-state">
-        Run spaCy NER to see detected entity categories here.
+        Run NER to see detected entity categories here.
       </div>
     );
   }

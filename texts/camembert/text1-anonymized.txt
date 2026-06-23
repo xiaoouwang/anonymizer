@@ -1,0 +1,5 @@
+Extrait d'entretien :
+
+La docteure [PERSON_1] a rencontré [PERSON_2] à [LOCATION_1] le [DATE_1].
+[PERSON_3] travaille avec l'[ORG_1] [LOCATION_2]. Son email est [EMAIL_1].
+La participante a aussi mentionné +33 [PHONE_1] et [URL_1].

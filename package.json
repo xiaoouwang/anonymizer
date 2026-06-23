@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && unset ELECTRON_RUN_AS_NODE && ELECTRON_START_URL=http://127.0.0.1:5173 electron .\"",
     "build": "vite build",
-    "build:ner": ".venv/bin/pyinstaller --noconfirm --clean --onedir --name ner-service --distpath python-dist --workpath python-build --collect-all spacy --collect-all fr_core_news_sm scripts/ner.py",
+    "build:ner": ".venv/bin/pyinstaller --noconfirm --clean --onedir --name ner-service --distpath python-dist --workpath python-build --collect-all spacy --collect-all fr_core_news_sm --collect-all fr_core_news_lg scripts/ner.py",
     "preview": "vite preview",
     "pack": "npm run build:ner && npm run build && electron-builder --dir",
     "dist": "npm run build:ner && npm run build && electron-builder",

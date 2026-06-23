@@ -1,0 +1,158 @@
+[
+  {
+    "data": {
+      "text": "Extrait d'entretien :\n\nLa docteure Marie Dupont a rencontré Jean Martin à Paris le 12 mars 2022.\nMarie travaille avec l'Université de Lyon. Son email est marie.dupont@example.com.\nLa participante a aussi mentionné +33 6 12 34 56 78 et https://example.org/project.",
+      "source_file": "text1.txt",
+      "ner_backend": "camembert",
+      "ner_model": "Jean-Baptiste/camembert-ner",
+      "exported_at": "2026-06-23T13:54:53.403808+00:00"
+    },
+    "predictions": [
+      {
+        "model_version": "Jean-Baptiste/camembert-ner",
+        "result": [
+          {
+            "id": "ner-0",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 35,
+              "end": 47,
+              "text": "Marie Dupont",
+              "labels": [
+                "Person"
+              ]
+            }
+          },
+          {
+            "id": "ner-1",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 60,
+              "end": 71,
+              "text": "Jean Martin",
+              "labels": [
+                "Person"
+              ]
+            }
+          },
+          {
+            "id": "ner-2",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 74,
+              "end": 79,
+              "text": "Paris",
+              "labels": [
+                "Location"
+              ]
+            }
+          },
+          {
+            "id": "ner-3",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 83,
+              "end": 95,
+              "text": "12 mars 2022",
+              "labels": [
+                "Date"
+              ]
+            }
+          },
+          {
+            "id": "ner-4",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 97,
+              "end": 102,
+              "text": "Marie",
+              "labels": [
+                "Person"
+              ]
+            }
+          },
+          {
+            "id": "ner-5",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 120,
+              "end": 130,
+              "text": "Université",
+              "labels": [
+                "Organization"
+              ]
+            }
+          },
+          {
+            "id": "ner-6",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 131,
+              "end": 138,
+              "text": "de Lyon",
+              "labels": [
+                "Location"
+              ]
+            }
+          },
+          {
+            "id": "ner-7",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 154,
+              "end": 178,
+              "text": "marie.dupont@example.com",
+              "labels": [
+                "Email"
+              ]
+            }
+          },
+          {
+            "id": "ner-8",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 218,
+              "end": 231,
+              "text": "6 12 34 56 78",
+              "labels": [
+                "Phone"
+              ]
+            }
+          },
+          {
+            "id": "ner-9",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 235,
+              "end": 262,
+              "text": "https://example.org/project",
+              "labels": [
+                "URL"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

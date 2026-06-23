@@ -1,0 +1,47 @@
+{
+  "input_dir": "/Users/xiwang/Documents/frenchnlp_cursor/texts",
+  "output_dir": "/Users/xiwang/Documents/frenchnlp_cursor/texts/camembert",
+  "requested_output_dir": "/Users/xiwang/Documents/frenchnlp_cursor/texts/camembert",
+  "output_redirected": false,
+  "backend": "camembert",
+  "categories": [
+    "date",
+    "email",
+    "location",
+    "misc",
+    "organization",
+    "person",
+    "phone",
+    "url"
+  ],
+  "text_files": 3,
+  "files_processed": 3,
+  "results": [
+    {
+      "source_file": "text1.txt",
+      "entity_count": 10,
+      "unique_values": 10,
+      "anonymized_path": "/Users/xiwang/Documents/frenchnlp_cursor/texts/camembert/text1-anonymized.txt",
+      "report_path": "/Users/xiwang/Documents/frenchnlp_cursor/texts/camembert/text1-report.md",
+      "label_studio_path": "/Users/xiwang/Documents/frenchnlp_cursor/texts/camembert/text1-label-studio.json"
+    },
+    {
+      "source_file": "text2.txt",
+      "entity_count": 12,
+      "unique_values": 12,
+      "anonymized_path": "/Users/xiwang/Documents/frenchnlp_cursor/texts/camembert/text2-anonymized.txt",
+      "report_path": "/Users/xiwang/Documents/frenchnlp_cursor/texts/camembert/text2-report.md",
+      "label_studio_path": "/Users/xiwang/Documents/frenchnlp_cursor/texts/camembert/text2-label-studio.json"
+    },
+    {
+      "source_file": "text3.txt",
+      "entity_count": 5,
+      "unique_values": 5,
+      "anonymized_path": "/Users/xiwang/Documents/frenchnlp_cursor/texts/camembert/text3-anonymized.txt",
+      "report_path": "/Users/xiwang/Documents/frenchnlp_cursor/texts/camembert/text3-report.md",
+      "label_studio_path": "/Users/xiwang/Documents/frenchnlp_cursor/texts/camembert/text3-label-studio.json"
+    }
+  ],
+  "errors": [],
+  "label_studio_config_path": "/Users/xiwang/Documents/frenchnlp_cursor/texts/camembert/label-studio-ner-config.xml"
+}

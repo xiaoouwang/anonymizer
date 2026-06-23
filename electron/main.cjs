@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
 const { spawn } = require("node:child_process");
@@ -72,12 +72,123 @@ function createWindow() {
   }
 }
 
-ipcMain.handle("ner:detect", async (_event, text) => {
+ipcMain.handle("ner:detect", async (_event, text, backend = "spacy") => {
   if (typeof text !== "string") {
     throw new Error("Expected text input for NER detection.");
   }
 
-  return getNerService().detect(text);
+  return getNerService().detect(text, backend);
+});
+
+ipcMain.handle("export:labelStudio", async (_event, { jsonContent, configContent, defaultBaseName }) => {
+  if (typeof jsonContent !== "string" || typeof configContent !== "string") {
+    throw new Error("Expected JSON and labeling config content for export.");
+  }
+
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    title: "Export Label Studio annotations",
+    defaultPath: `${defaultBaseName || "label-studio-ner"}.json`,
+    filters: [{ name: "Label Studio JSON", extensions: ["json"] }],
+  });
+
+  if (canceled || !filePath) {
+    return { canceled: true };
+  }
+
+  const configPath = path.join(path.dirname(filePath), "label-studio-ner-config.xml");
+  fs.writeFileSync(filePath, jsonContent, "utf8");
+  fs.writeFileSync(configPath, configContent, "utf8");
+
+  return {
+    canceled: false,
+    jsonPath: filePath,
+    configPath,
+  };
+});
+
+ipcMain.handle("batch:anonymizeLabelStudio", async () => {
+  const inputDialog = await dialog.showOpenDialog({
+    title: "Select folder with Label Studio JSON exports",
+    properties: ["openDirectory"],
+  });
+
+  if (inputDialog.canceled || !inputDialog.filePaths[0]) {
+    return { canceled: true };
+  }
+
+  const outputDialog = await dialog.showOpenDialog({
+    title: "Select output folder for reports and anonymized text",
+    properties: ["openDirectory", "createDirectory"],
+  });
+
+  if (outputDialog.canceled || !outputDialog.filePaths[0]) {
+    return { canceled: true };
+  }
+
+  const scriptPath = getAnonymizationScriptPath();
+  if (!fs.existsSync(scriptPath)) {
+    throw new Error(`Anonymization script not found at ${scriptPath}`);
+  }
+
+  return runAnonymizationBatch(
+    scriptPath,
+    inputDialog.filePaths[0],
+    outputDialog.filePaths[0],
+  );
+});
+
+ipcMain.handle("batch:processTextFolder", async (_event, options = {}) => {
+  const { backend = "spacy-lg", categories = [] } = options;
+
+  if (!Array.isArray(categories) || categories.length === 0) {
+    throw new Error("Select at least one entity category to anonymize.");
+  }
+
+  const inputDialog = await dialog.showOpenDialog({
+    title: "Select folder with text files to anonymize",
+    properties: ["openDirectory"],
+  });
+
+  if (inputDialog.canceled || !inputDialog.filePaths[0]) {
+    return { canceled: true };
+  }
+
+  const outputDialog = await dialog.showOpenDialog({
+    title: "Select output folder for anonymized files and reports",
+    properties: ["openDirectory", "createDirectory"],
+  });
+
+  if (outputDialog.canceled || !outputDialog.filePaths[0]) {
+    return { canceled: true };
+  }
+
+  let outputDir = outputDialog.filePaths[0];
+  const inputDir = inputDialog.filePaths[0];
+  let outputRedirected = false;
+
+  if (path.resolve(outputDir) === path.resolve(inputDir)) {
+    outputDir = path.join(inputDir, "anonymized-results");
+    outputRedirected = true;
+  }
+
+  const scriptPath = getBatchTextScriptPath();
+  if (!fs.existsSync(scriptPath)) {
+    throw new Error(`Batch text script not found at ${scriptPath}`);
+  }
+
+  return runPythonJsonScript(scriptPath, [
+    "--input-dir",
+    inputDir,
+    "--output-dir",
+    outputDir,
+    "--backend",
+    backend,
+    "--categories",
+    categories.join(","),
+  ]).then((summary) => ({
+    ...summary,
+    output_redirected: outputRedirected,
+  }));
 });
 
 app.whenReady().then(() => {
@@ -158,7 +269,7 @@ class NerService {
     return this.readyPromise;
   }
 
-  async detect(text) {
+  async detect(text, backend = "spacy") {
     await this.start();
 
     const id = String(this.nextRequestId++);
@@ -169,11 +280,11 @@ class NerService {
         timeout: setTimeout(() => {
           this.pending.delete(id);
           reject(new Error("Local NER detection timed out."));
-        }, 90000),
+        }, 180000),
       });
     });
 
-    this.child.stdin.write(`${JSON.stringify({ id, text })}\n`);
+    this.child.stdin.write(`${JSON.stringify({ id, text, backend })}\n`);
     return request;
   }
 
@@ -248,4 +359,65 @@ function getNerCommand() {
     command: process.env.PYTHON || (fs.existsSync(localPython) ? localPython : "python3"),
     args: [scriptPath, "--server"],
   };
+}
+
+function getPythonCommand() {
+  const resourceRoot = app.isPackaged ? process.resourcesPath : path.join(__dirname, "..");
+  const localPython = path.join(
+    resourceRoot,
+    process.platform === "win32" ? ".venv/Scripts/python.exe" : ".venv/bin/python",
+  );
+
+  return process.env.PYTHON || (fs.existsSync(localPython) ? localPython : "python3");
+}
+
+function getAnonymizationScriptPath() {
+  const resourceRoot = app.isPackaged ? process.resourcesPath : path.join(__dirname, "..");
+  return path.join(resourceRoot, "scripts/anonymization_report.py");
+}
+
+function getBatchTextScriptPath() {
+  const resourceRoot = app.isPackaged ? process.resourcesPath : path.join(__dirname, "..");
+  return path.join(resourceRoot, "scripts/batch_anonymize_texts.py");
+}
+
+function runPythonJsonScript(scriptPath, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(getPythonCommand(), [scriptPath, ...args]);
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on("error", (error) => {
+      reject(new Error(`Could not run Python script. ${error.message}`));
+    });
+
+    child.on("close", (code) => {
+      if (code !== 0) {
+        reject(
+          new Error(stderr.trim() || stdout.trim() || `Python script exited with code ${code}.`),
+        );
+        return;
+      }
+
+      try {
+        const summary = JSON.parse(stdout.trim());
+        resolve({ canceled: false, ...summary });
+      } catch (error) {
+        reject(new Error(`Could not parse Python script result. ${error.message}`));
+      }
+    });
+  });
+}
+
+function runAnonymizationBatch(scriptPath, inputDir, outputDir) {
+  return runPythonJsonScript(scriptPath, ["--input-dir", inputDir, "--output-dir", outputDir]);
 }

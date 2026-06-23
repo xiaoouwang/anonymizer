@@ -121,8 +121,76 @@ h2 {
   gap: 0.75rem;
 }
 
+.backend-select {
+  align-items: center;
+  color: #4b5563;
+  display: flex;
+  font-size: 0.85rem;
+  font-weight: 700;
+  gap: 0.5rem;
+}
+
+.backend-select select {
+  background: white;
+  border: 1px solid rgba(32, 58, 95, 0.18);
+  border-radius: 999px;
+  color: #1f2937;
+  max-width: 320px;
+  padding: 0.55rem 0.85rem;
+}
+
 .status {
   color: #4b5563;
+}
+
+.batch-panel .panel-header {
+  align-items: flex-start;
+}
+
+.batch-panel h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.35rem;
+}
+
+.batch-description,
+.batch-output-note {
+  color: #697386;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.batch-categories {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0 1rem 1rem;
+}
+
+.batch-categories-label {
+  color: #4b5563;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.batch-category-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.batch-category-toggle {
+  align-items: center;
+  background: #fffdf8;
+  border: 1px solid rgba(32, 58, 95, 0.12);
+  border-radius: 0.85rem;
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.7rem 0.85rem;
+}
+
+.batch-category-toggle input {
+  height: 1rem;
+  width: 1rem;
 }
 
 .error-card {

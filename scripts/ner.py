@@ -4,12 +4,12 @@ import sys
 
 import spacy
 
+SPACY_MODELS = {
+    "spacy-sm": "fr_core_news_sm",
+    "spacy-lg": "fr_core_news_lg",
+}
 
-MODEL_CANDIDATES = [
-    "fr_core_news_md",
-    "fr_core_news_sm",
-    "en_core_web_sm",
-]
+CAMEMBERT_MODEL_ID = "Jean-Baptiste/camembert-ner"
 
 SPACY_TO_APP_LABEL = {
     "PER": "person",
@@ -19,6 +19,13 @@ SPACY_TO_APP_LABEL = {
     "ORG": "organization",
     "MISC": "misc",
     "DATE": "date",
+}
+
+CAMEMBERT_TO_APP_LABEL = {
+    "PER": "person",
+    "LOC": "location",
+    "ORG": "organization",
+    "MISC": "misc",
 }
 
 RULE_PATTERNS = [
@@ -41,36 +48,7 @@ RULE_PATTERNS = [
     ),
 ]
 
-
-def detect_entities(text, nlp, model_name):
-    entities = []
-    if nlp is not None:
-        doc = nlp(text)
-        entities.extend(
-            {
-                "text": ent.text,
-                "start": ent.start_char,
-                "end": ent.end_char,
-                "label": SPACY_TO_APP_LABEL.get(ent.label_, ent.label_.lower()),
-                "source": f"spacy:{model_name}",
-            }
-            for ent in doc.ents
-            if ent.text.strip()
-        )
-
-    for label, pattern in RULE_PATTERNS:
-        for match in pattern.finditer(text):
-            entities.append(
-                {
-                    "text": trim_match(match.group(0)),
-                    "start": match.start(),
-                    "end": match.start() + len(trim_match(match.group(0))),
-                    "label": label,
-                    "source": "rule",
-                }
-            )
-
-    return {"model": model_name or "none", "entities": merge_entities(entities)}
+BACKEND_CACHE = {}
 
 
 def main():
@@ -80,20 +58,30 @@ def main():
 
     payload = json.load(sys.stdin)
     text = payload.get("text", "")
-    nlp, model_name = load_model()
-    print(json.dumps(detect_entities(text, nlp, model_name)))
+    backend = normalize_backend(payload.get("backend", "spacy"))
+    print(json.dumps(detect_entities(text, backend)))
 
 
 def run_server():
-    nlp, model_name = load_model()
-    print(json.dumps({"type": "ready", "model": model_name or "none"}), flush=True)
+    print(
+        json.dumps(
+            {
+                "type": "ready",
+                "backends": ["spacy-sm", "spacy-lg", "camembert"],
+                "default_backend": "spacy-lg",
+            }
+        ),
+        flush=True,
+    )
 
     for line in sys.stdin:
+        payload = None
         try:
             payload = json.loads(line)
             request_id = payload.get("id")
             text = payload.get("text", "")
-            result = detect_entities(text, nlp, model_name)
+            backend = normalize_backend(payload.get("backend", "spacy"))
+            result = detect_entities(text, backend)
             print(
                 json.dumps({"type": "result", "id": request_id, "result": result}),
                 flush=True,
@@ -103,7 +91,7 @@ def run_server():
                 json.dumps(
                     {
                         "type": "error",
-                        "id": payload.get("id") if "payload" in locals() else None,
+                        "id": payload.get("id") if payload else None,
                         "error": str(error),
                     }
                 ),
@@ -111,14 +99,149 @@ def run_server():
             )
 
 
-def load_model():
-    for model_name in MODEL_CANDIDATES:
-        try:
-            return spacy.load(model_name), model_name
-        except OSError:
+def normalize_backend(value):
+    backend = (value or "spacy-lg").strip().lower()
+    if backend == "spacy":
+        backend = "spacy-lg"
+    if backend not in {"spacy-sm", "spacy-lg", "camembert"}:
+        raise ValueError(f"Unknown NER backend: {value}")
+    return backend
+
+
+def detect_entities(text, backend):
+    if backend == "camembert":
+        model_entities = detect_with_camembert(text)
+        model_name = CAMEMBERT_MODEL_ID
+    else:
+        model_entities, model_name = detect_with_spacy(text, backend)
+
+    entities = list(model_entities)
+    entities.extend(detect_with_rules(text))
+
+    return {
+        "backend": backend,
+        "model": model_name or "none",
+        "entities": merge_entities(entities),
+    }
+
+
+def detect_with_spacy(text, backend):
+    nlp, model_name = get_spacy_backend(backend)
+    entities = []
+
+    doc = nlp(text)
+    entities.extend(
+        {
+            "text": ent.text,
+            "start": ent.start_char,
+            "end": ent.end_char,
+            "label": SPACY_TO_APP_LABEL.get(ent.label_, ent.label_.lower()),
+            "source": f"spacy:{model_name}",
+        }
+        for ent in doc.ents
+        if ent.text.strip()
+    )
+
+    return entities, model_name
+
+
+def detect_with_camembert(text):
+    pipeline = get_camembert_backend()
+    entities = []
+    search_from = 0
+
+    for ent in pipeline(text):
+        word = (ent.get("word") or "").strip()
+        if not word:
             continue
 
-    return None, None
+        start = ent.get("start")
+        end = ent.get("end")
+        if start is None or end is None:
+            start = text.find(word, search_from)
+            if start < 0:
+                start = text.lower().find(word.lower())
+            if start < 0:
+                continue
+            end = start + len(word)
+            search_from = end
+
+        entities.append(
+            {
+                "text": word,
+                "start": start,
+                "end": end,
+                "label": CAMEMBERT_TO_APP_LABEL.get(ent.get("entity_group"), "misc"),
+                "source": f"camembert:{CAMEMBERT_MODEL_ID}",
+            }
+        )
+
+    return entities
+
+
+def detect_with_rules(text):
+    entities = []
+
+    for label, pattern in RULE_PATTERNS:
+        for match in pattern.finditer(text):
+            match_text = trim_match(match.group(0))
+            entities.append(
+                {
+                    "text": match_text,
+                    "start": match.start(),
+                    "end": match.start() + len(match_text),
+                    "label": label,
+                    "source": "rule",
+                }
+            )
+
+    return entities
+
+
+def get_spacy_backend(backend):
+    if backend not in BACKEND_CACHE:
+        BACKEND_CACHE[backend] = load_spacy_model(backend)
+    return BACKEND_CACHE[backend]
+
+
+def load_spacy_model(backend):
+    model_name = SPACY_MODELS.get(backend)
+    if not model_name:
+        raise ValueError(f"Unknown spaCy backend: {backend}")
+
+    try:
+        return spacy.load(model_name), model_name
+    except OSError as error:
+        raise RuntimeError(
+            f"spaCy model '{model_name}' is not installed. "
+            f"Run: python -m spacy download {model_name}"
+        ) from error
+
+
+def get_camembert_backend():
+    if "camembert" not in BACKEND_CACHE:
+        BACKEND_CACHE["camembert"] = load_camembert_model()
+    return BACKEND_CACHE["camembert"]
+
+
+def load_camembert_model():
+    import torch
+    from transformers import pipeline
+    from transformers.models.camembert import CamembertTokenizer
+
+    if not hasattr(torch, "Tensor"):
+        raise RuntimeError(
+            "PyTorch is not available. Install CamemBERT dependencies with "
+            "pip install -r requirements-camembert.txt"
+        )
+
+    tokenizer = CamembertTokenizer.from_pretrained(CAMEMBERT_MODEL_ID)
+    return pipeline(
+        "ner",
+        model=CAMEMBERT_MODEL_ID,
+        tokenizer=tokenizer,
+        aggregation_strategy="simple",
+    )
 
 
 def merge_entities(entities):
@@ -131,15 +254,9 @@ def merge_entities(entities):
         ),
     )
     kept = []
-    seen = set()
 
     for entity in sorted_entities:
         if entity["start"] >= entity["end"]:
-            continue
-
-        key = (entity["label"], entity["text"].casefold())
-
-        if key in seen:
             continue
 
         if any(
@@ -148,7 +265,6 @@ def merge_entities(entities):
         ):
             continue
 
-        seen.add(key)
         kept.append(entity)
 
     return sorted(kept, key=lambda item: item["start"])
