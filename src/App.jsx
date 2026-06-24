@@ -1143,383 +1143,370 @@ export default function App() {
         </header>
       ) : null}
       <main className="app">
-      <header className="hero">
-        <div>
-          <div className="hero-brand">
-            <img
-              className="hero-logo"
-              src="./logo.png"
-              alt=""
-              width={72}
-              height={72}
-            />
-            <div className="hero-brand-text">
-              <h1>Incognito</h1>
-              <p className="hero-tagline">Privacy-first qualitative data anonymization</p>
-            </div>
-          </div>
-
-          <p>
-            🔒 Anonymize your textual data with complete confidentiality<br />
-            🕵️‍♂️ Detect named entities<br />
-            👀 Review the identified occurrences<br />
-            📑 Generate an anonymized audit report
-          </p>
-          <p className="credits">
-            👨‍💻 Developed by{" "}
-            <a href="https://xiaoouwang.github.io/" target="_blank" rel="noreferrer">
-              Xiaoou Wang
-            </a>
-            {" · "}Digital Humanities Engineer{" · "}
-            <a href="https://mshs.univ-cotedazur.fr/" target="_blank" rel="noreferrer">
-              MSHS Sud-Est
-            </a>
-            {" · "}
-            <a href="https://univ-cotedazur.fr/" target="_blank" rel="noreferrer">
-              Université Côte d&apos;Azur
-            </a>
-
-          </p>
-        </div>
-        <aside className="privacy-note">
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span role="img" aria-label="lock" style={{ fontSize: "2em" }}>🔒</span>
-            <div>
-              <strong style={{ fontSize: "1.1em" }}>Your Data Stays Private</strong>
-              <br />
-              <span style={{
-                color: "#308350",
-                fontWeight: 500,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-              }}>
-                <svg width="20" height="20" style={{ verticalAlign: "middle" }} viewBox="0 0 20 20" fill="none">
-                  <circle cx="10" cy="10" r="9" stroke="#308350" strokeWidth="2" fill="#E8F7F0" />
-                  <path d="M6 10.5l2.5 2.5 5-5" stroke="#308350" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Local-first: zero data leaves your device.
-              </span>
-              <div style={{ fontSize: "0.95em", marginTop: 2 }}>
-                Your text is <strong>only</strong> sent to your local Python NER process.<br />
-                <span style={{ color: "#555" }}>Never shared, never sent to external servers or AI APIs.</span>
+        <header className="hero">
+          <div>
+            <div className="hero-brand">
+              <img
+                className="hero-logo"
+                src="./logo.png"
+                alt=""
+                width={72}
+                height={72}
+              />
+              <div className="hero-brand-text">
+                <h1>Incognito</h1>
+                <p className="hero-tagline">Privacy-first qualitative data anonymization</p>
               </div>
             </div>
-          </div>
-        </aside>
 
-      </header>
+            <p>
+              🔒 Anonymize your textual data with complete confidentiality<br />
+              🕵️‍♂️ Detect named entities<br />
+              👀 Review the identified occurrences<br />
+              📑 Generate an anonymized audit report
+            </p>
+            <p className="credits">
+              👨‍💻 Developed by{" "}
+              <a href="https://xiaoouwang.github.io/" target="_blank" rel="noreferrer">
+                Xiaoou Wang
+              </a>
+              {" · "}Digital Humanities Engineer{" · "}
+              <a href="https://mshs.univ-cotedazur.fr/" target="_blank" rel="noreferrer">
+                MSHS Sud-Est
+              </a>
+              {" · "}
+              <a href="https://univ-cotedazur.fr/" target="_blank" rel="noreferrer">
+                Université Côte d&apos;Azur
+              </a>
 
-      <section className="controls">
-        <label className="backend-select">
-          Default model
-          <select
-            value={nerBackend}
-            onChange={(event) => {
-              setNerBackend(event.target.value);
-              setEntities([]);
-              setSelectedCategories({});
-              setExcludedEntityKeys({});
-              setModelName(null);
-              setStatus(
-                `Default model set to ${NER_BACKENDS[event.target.value]}. Run detection again.`,
-              );
-            }}
-            disabled={isDetecting}
-          >
-            <option value="spacy-sm">{NER_BACKENDS["spacy-sm"]}</option>
-            <option value="spacy-lg">{NER_BACKENDS["spacy-lg"]}</option>
-            <option value="camembert">{NER_BACKENDS.camembert}</option>
-          </select>
-        </label>
-        <button onClick={detectEntities} disabled={!text.trim() || isDetecting}>
-          {isDetecting ? "Detecting..." : "Run NER"}
-        </button>
-        <button onClick={copyAnonymizedText} disabled={!entities.length}>
-          Copy anonymized text
-        </button>
-        <button onClick={() => setReportOpen(true)} disabled={!entities.length}>
-          Show audit report
-        </button>
-        <button
-          className="secondary"
-          onClick={downloadLabelStudioExport}
-          disabled={!entities.length || isBatchLoading}
-        >
-          Export to Label Studio
-        </button>
-        <button
-          className="secondary"
-          onClick={batchAnonymizeFromLabelStudio}
-          disabled={isDetecting || isBatchLoading}
-        >
-          {isBatchLoading ? "Processing..." : "Batch from Label Studio"}
-        </button>
-        {batchMode && (
-          <>
-            <button
-              className="secondary"
-              onClick={() => goToFile(currentFileIndex - 1)}
-              disabled={currentFileIndex === 0 || isBatchLoading || isDetecting}
-            >
-              Previous file
-            </button>
-            <button
-              className="secondary"
-              onClick={() => goToFile(currentFileIndex + 1)}
-              disabled={currentFileIndex >= batchFiles.length - 1 || isBatchLoading || isDetecting}
-            >
-              Next file
-            </button>
-          </>
-        )}
-        <button
-          className="secondary"
-          onClick={clearSession}
-          disabled={isBatchLoading}
-        >
-          {batchMode ? "Close folder" : "Clear"}
-        </button>
-        <span className="status">{status}</span>
-      </section>
-
-      <section className="batch-panel panel">
-        <div className="panel-header">
-          <div>
-            <h2>Batch text folder</h2>
-            <p className="batch-description">
-              Load a folder of <code>.txt</code> or <code>.text</code> files. Each load creates a
-              new timestamped <code>outputs-YYYYMMDD-HHMMSS</code> subfolder, runs the selected model
-              on every file, then review each document with previous/next navigation or jump directly
-              to a file number or name.
             </p>
           </div>
-          <button onClick={loadBatchFolder} disabled={isDetecting || isBatchLoading}>
-            {isBatchLoading ? "Loading folder..." : batchMode ? "Load another folder" : "Load text folder"}
-          </button>
-        </div>
+          <aside className="privacy-note">
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span role="img" aria-label="lock" style={{ fontSize: "2em" }}>🔒</span>
+              <div>
+                <strong style={{ fontSize: "1.1em" }}>Your Data Stays Private</strong>
+                <br />
+                <div style={{ fontSize: "0.95em", marginTop: 2 }}>
+                  Your text is <strong>only</strong> sent to your local Python NER process.<br />
+                  <span style={{ color: "#555" }}>Never shared, never sent to external servers or AI APIs.</span>
+                </div>
+              </div>
+            </div>
+          </aside>
 
-        {batchMode ? (
-          <>
-            <div className="batch-navigation">
+        </header>
+
+        <section className="controls">
+          <label className="backend-select">
+            Default model
+            <select
+              value={nerBackend}
+              onChange={(event) => {
+                setNerBackend(event.target.value);
+                setEntities([]);
+                setSelectedCategories({});
+                setExcludedEntityKeys({});
+                setModelName(null);
+                setStatus(
+                  `Default model set to ${NER_BACKENDS[event.target.value]}. Run detection again.`,
+                );
+              }}
+              disabled={isDetecting}
+            >
+              <option value="spacy-sm">{NER_BACKENDS["spacy-sm"]}</option>
+              <option value="spacy-lg">{NER_BACKENDS["spacy-lg"]}</option>
+              <option value="camembert">{NER_BACKENDS.camembert}</option>
+            </select>
+          </label>
+          <button onClick={detectEntities} disabled={!text.trim() || isDetecting}>
+            {isDetecting ? "Detecting..." : "Run NER"}
+          </button>
+          <button onClick={copyAnonymizedText} disabled={!entities.length}>
+            Copy anonymized text
+          </button>
+          <button onClick={() => setReportOpen(true)} disabled={!entities.length}>
+            Show audit report
+          </button>
+          <button
+            className="secondary"
+            onClick={downloadLabelStudioExport}
+            disabled={!entities.length || isBatchLoading}
+          >
+            Export to Label Studio
+          </button>
+          <button
+            className="secondary"
+            onClick={batchAnonymizeFromLabelStudio}
+            disabled={isDetecting || isBatchLoading}
+          >
+            {isBatchLoading ? "Processing..." : "Batch from Label Studio"}
+          </button>
+          {batchMode && (
+            <>
               <button
+                className="secondary"
                 onClick={() => goToFile(currentFileIndex - 1)}
                 disabled={currentFileIndex === 0 || isBatchLoading || isDetecting}
               >
                 Previous file
               </button>
-              <div className="batch-file-indicator">
-                <strong>
-                  {currentFileIndex + 1} / {batchFiles.length}
-                </strong>
-                <span>{currentFile?.name}</span>
-                <small>{batchFolder}</small>
-                {batchOutputDir ? <small>{batchOutputDir}</small> : null}
-              </div>
               <button
+                className="secondary"
                 onClick={() => goToFile(currentFileIndex + 1)}
                 disabled={currentFileIndex >= batchFiles.length - 1 || isBatchLoading || isDetecting}
               >
                 Next file
               </button>
+            </>
+          )}
+          <button
+            className="secondary"
+            onClick={clearSession}
+            disabled={isBatchLoading}
+          >
+            {batchMode ? "Close folder" : "Clear"}
+          </button>
+          <span className="status">{status}</span>
+        </section>
+
+        <section className="batch-panel panel">
+          <div className="panel-header">
+            <div>
+              <h2>Batch text folder</h2>
+              <p className="batch-description">
+                Load a folder of <code>.txt</code> or <code>.text</code> files. Each load creates a
+                new timestamped <code>outputs-YYYYMMDD-HHMMSS</code> subfolder, runs the selected model
+                on every file, then review each document with previous/next navigation or jump directly
+                to a file number or name.
+              </p>
             </div>
+            <button onClick={loadBatchFolder} disabled={isDetecting || isBatchLoading}>
+              {isBatchLoading ? "Loading folder..." : batchMode ? "Load another folder" : "Load text folder"}
+            </button>
+          </div>
 
-            <div className="batch-jump-controls">
-              <form className="batch-jump-field" onSubmit={handleJumpToFileNumber}>
-                <label htmlFor="batch-jump-number">Go to file #</label>
-                <div className="batch-jump-row">
-                  <input
-                    id="batch-jump-number"
-                    type="number"
-                    min={1}
-                    max={batchFiles.length}
-                    value={jumpFileNumber}
-                    onChange={(event) => setJumpFileNumber(event.target.value)}
-                    disabled={isBatchLoading || isDetecting}
-                  />
-                  <button type="submit" disabled={isBatchLoading || isDetecting}>
-                    Go
-                  </button>
+          {batchMode ? (
+            <>
+              <div className="batch-navigation">
+                <button
+                  onClick={() => goToFile(currentFileIndex - 1)}
+                  disabled={currentFileIndex === 0 || isBatchLoading || isDetecting}
+                >
+                  Previous file
+                </button>
+                <div className="batch-file-indicator">
+                  <strong>
+                    {currentFileIndex + 1} / {batchFiles.length}
+                  </strong>
+                  <span>{currentFile?.name}</span>
+                  <small>{batchFolder}</small>
+                  {batchOutputDir ? <small>{batchOutputDir}</small> : null}
                 </div>
-              </form>
+                <button
+                  onClick={() => goToFile(currentFileIndex + 1)}
+                  disabled={currentFileIndex >= batchFiles.length - 1 || isBatchLoading || isDetecting}
+                >
+                  Next file
+                </button>
+              </div>
 
-              <form className="batch-jump-field" onSubmit={handleJumpToFileName}>
-                <label htmlFor="batch-jump-name">Go to file name</label>
-                <div className="batch-jump-row">
-                  <input
-                    id="batch-jump-name"
-                    list="batch-file-list"
-                    value={jumpFileName}
-                    onChange={(event) => setJumpFileName(event.target.value)}
-                    placeholder="Type or pick a file name"
-                    disabled={isBatchLoading || isDetecting}
-                  />
-                  <datalist id="batch-file-list">
-                    {batchFiles.map((file, index) => (
-                      <option key={file.path} value={file.name}>
-                        {index + 1}. {file.name}
-                      </option>
-                    ))}
-                  </datalist>
-                  <button type="submit" disabled={isBatchLoading || isDetecting}>
-                    Go
-                  </button>
-                </div>
-              </form>
-            </div>
-          </>
-        ) : null}
+              <div className="batch-jump-controls">
+                <form className="batch-jump-field" onSubmit={handleJumpToFileNumber}>
+                  <label htmlFor="batch-jump-number">Go to file #</label>
+                  <div className="batch-jump-row">
+                    <input
+                      id="batch-jump-number"
+                      type="number"
+                      min={1}
+                      max={batchFiles.length}
+                      value={jumpFileNumber}
+                      onChange={(event) => setJumpFileNumber(event.target.value)}
+                      disabled={isBatchLoading || isDetecting}
+                    />
+                    <button type="submit" disabled={isBatchLoading || isDetecting}>
+                      Go
+                    </button>
+                  </div>
+                </form>
 
-        <label className="batch-auto-ner">
-          <input
-            type="checkbox"
-            checked={autoRunNer}
-            onChange={(event) => toggleAutoRunNer(event.target.checked)}
-            disabled={isDetecting}
-          />
-          <span>
-            Auto-run default model when opening an unprocessed file
-            <small>Uses {NER_BACKENDS[nerBackend]} for files without saved detections.</small>
-          </span>
-        </label>
+                <form className="batch-jump-field" onSubmit={handleJumpToFileName}>
+                  <label htmlFor="batch-jump-name">Go to file name</label>
+                  <div className="batch-jump-row">
+                    <input
+                      id="batch-jump-name"
+                      list="batch-file-list"
+                      value={jumpFileName}
+                      onChange={(event) => setJumpFileName(event.target.value)}
+                      placeholder="Type or pick a file name"
+                      disabled={isBatchLoading || isDetecting}
+                    />
+                    <datalist id="batch-file-list">
+                      {batchFiles.map((file, index) => (
+                        <option key={file.path} value={file.name}>
+                          {index + 1}. {file.name}
+                        </option>
+                      ))}
+                    </datalist>
+                    <button type="submit" disabled={isBatchLoading || isDetecting}>
+                      Go
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </>
+          ) : null}
 
-        <p className="batch-output-note">
-          Initial outputs per file: <code>*-anonymized.txt</code>, <code>*-report.md</code>, and{" "}
-          <code>*-label-studio.json</code> in the current timestamped outputs folder, plus shared{" "}
-          <code>label-studio-ner-config.xml</code>. When you switch to another file, the file you
-          leave is saved with a <code>_modified</code> suffix (for example{" "}
-          <code>*-anonymized_modified.txt</code>).
-        </p>
-      </section>
+          <label className="batch-auto-ner">
+            <input
+              type="checkbox"
+              checked={autoRunNer}
+              onChange={(event) => toggleAutoRunNer(event.target.checked)}
+              disabled={isDetecting}
+            />
+            <span>
+              Auto-run default model when opening an unprocessed file
+              <small>Uses {NER_BACKENDS[nerBackend]} for files without saved detections.</small>
+            </span>
+          </label>
 
-      {error && (
-        <section className="error-card">
-          <strong>NER setup needed</strong>
-          <p>{error}</p>
-          <p>
-            Install Python dependencies with <code>pip install -r requirements.txt</code>.
-            For spaCy, install French models with{" "}
-            <code>python -m spacy download fr_core_news_sm</code> and{" "}
-            <code>python -m spacy download fr_core_news_lg</code>.
-            For CamemBERT, also run{" "}
-            <code>pip install -r requirements-camembert.txt</code> (Python 3.12
-            required). The model downloads automatically on first use via Hugging
-            Face.
+          <p className="batch-output-note">
+            Initial outputs per file: <code>*-anonymized.txt</code>, <code>*-report.md</code>, and{" "}
+            <code>*-label-studio.json</code> in the current timestamped outputs folder, plus shared{" "}
+            <code>label-studio-ner-config.xml</code>. When you switch to another file, the file you
+            leave is saved with a <code>_modified</code> suffix (for example{" "}
+            <code>*-anonymized_modified.txt</code>).
           </p>
         </section>
-      )}
 
-      <section className="workspace">
-        <div className="panel">
-          <div className="panel-header">
-            <h2>{batchMode ? "1. Source Text" : "1. Paste Text"}</h2>
-            <span>
-              {batchMode && currentFile ? `${currentFile.name} · ` : ""}
-              {text.length} characters
-            </span>
-          </div>
-          <textarea
-            value={text}
-            onChange={(event) => {
-              setText(event.target.value);
-              setEntities([]);
-              setSelectedCategories({});
-              setExcludedEntityKeys({});
-              setModelName(null);
-              setEntityMenu(null);
-            }}
-            placeholder="Paste interview transcript or field notes here..."
-          />
-        </div>
+        {error && (
+          <section className="error-card">
+            <strong>NER setup needed</strong>
+            <p>{error}</p>
+            <p>
+              Install Python dependencies with <code>pip install -r requirements.txt</code>.
+              For spaCy, install French models with{" "}
+              <code>python -m spacy download fr_core_news_sm</code> and{" "}
+              <code>python -m spacy download fr_core_news_lg</code>.
+              For CamemBERT, also run{" "}
+              <code>pip install -r requirements-camembert.txt</code> (Python 3.12
+              required). The model downloads automatically on first use via Hugging
+              Face.
+            </p>
+          </section>
+        )}
 
-        <div className="panel">
-          <div className="panel-header">
-            <h2>2. Replace Categories?</h2>
-            <span>
-              {modelName
-                ? `Model: ${modelName} (${nerBackend}) · click entities to toggle`
-                : `Backend: ${NER_BACKENDS[nerBackend]}`}
-            </span>
+        <section className="workspace">
+          <div className="panel">
+            <div className="panel-header">
+              <h2>{batchMode ? "1. Source Text" : "1. Paste Text"}</h2>
+              <span>
+                {batchMode && currentFile ? `${currentFile.name} · ` : ""}
+                {text.length} characters
+              </span>
+            </div>
+            <textarea
+              value={text}
+              onChange={(event) => {
+                setText(event.target.value);
+                setEntities([]);
+                setSelectedCategories({});
+                setExcludedEntityKeys({});
+                setModelName(null);
+                setEntityMenu(null);
+              }}
+              placeholder="Paste interview transcript or field notes here..."
+            />
           </div>
-          <CategoryReview
-            entities={entities}
-            groupedEntities={groupedEntities}
+
+          <div className="panel">
+            <div className="panel-header">
+              <h2>2. Replace Categories?</h2>
+              <span>
+                {modelName
+                  ? `Model: ${modelName} (${nerBackend}) · click entities to toggle`
+                  : `Backend: ${NER_BACKENDS[nerBackend]}`}
+              </span>
+            </div>
+            <CategoryReview
+              entities={entities}
+              groupedEntities={groupedEntities}
+              categoryLabels={categoryLabels}
+              selectedCategories={selectedCategories}
+              excludedEntityKeys={excludedEntityKeys}
+              onToggleCategory={toggleCategory}
+              onToggleEntity={toggleEntityValue}
+            />
+          </div>
+        </section>
+
+        <section className="preview-grid">
+          <div className="panel">
+            <div className="panel-header">
+              <h2>3. Highlighted Entities</h2>
+              <span>
+                {entities.length} spans · select text to add (all word matches by default) · click highlight to remove
+              </span>
+            </div>
+            <HighlightedText
+              text={text}
+              segments={highlightedSegments}
+              categoryLabels={categoryLabels}
+              selectedCategories={selectedCategories}
+              excludedEntityKeys={excludedEntityKeys}
+              onAddSelection={(selection) => {
+                const nextMenu = {
+                  mode: "add",
+                  scope: "all",
+                  ...selection,
+                };
+                entityMenuRef.current = nextMenu;
+                setEntityMenu(nextMenu);
+              }}
+              onEntityClick={(entity, position) => {
+                const nextMenu = {
+                  mode: "remove",
+                  entity,
+                  ...position,
+                };
+                entityMenuRef.current = nextMenu;
+                setEntityMenu(nextMenu);
+              }}
+            />
+          </div>
+
+          <div className="panel">
+            <div className="panel-header">
+              <h2>4. Anonymized Preview</h2>
+              <span>Selected categories only</span>
+            </div>
+            <pre className="text-preview">{anonymizedText || "Run detection to preview replacements."}</pre>
+          </div>
+        </section>
+
+        {entityMenu && (
+          <EntityEditMenu
+            menu={entityMenu}
+            sourceText={text}
+            menuCategories={menuCategories}
             categoryLabels={categoryLabels}
-            selectedCategories={selectedCategories}
-            excludedEntityKeys={excludedEntityKeys}
-            onToggleCategory={toggleCategory}
-            onToggleEntity={toggleEntityValue}
+            onScopeChange={setEntityMenuScope}
+            onAdd={handleAddEntity}
+            onAddCustom={handleAddCustomCategory}
+            onRemove={handleRemoveEntity}
+            onClose={closeEntityMenu}
           />
-        </div>
-      </section>
+        )}
 
-      <section className="preview-grid">
-        <div className="panel">
-          <div className="panel-header">
-            <h2>3. Highlighted Entities</h2>
-            <span>
-              {entities.length} spans · select text to add (all word matches by default) · click highlight to remove
-            </span>
-          </div>
-          <HighlightedText
-            text={text}
-            segments={highlightedSegments}
-            categoryLabels={categoryLabels}
-            selectedCategories={selectedCategories}
-            excludedEntityKeys={excludedEntityKeys}
-            onAddSelection={(selection) => {
-              const nextMenu = {
-                mode: "add",
-                scope: "all",
-                ...selection,
-              };
-              entityMenuRef.current = nextMenu;
-              setEntityMenu(nextMenu);
-            }}
-            onEntityClick={(entity, position) => {
-              const nextMenu = {
-                mode: "remove",
-                entity,
-                ...position,
-              };
-              entityMenuRef.current = nextMenu;
-              setEntityMenu(nextMenu);
-            }}
+        {reportOpen && (
+          <AuditReportWindow
+            report={auditReport}
+            onClose={() => setReportOpen(false)}
+            onCopy={copyAuditReport}
+            onDownload={downloadAuditReport}
           />
-        </div>
-
-        <div className="panel">
-          <div className="panel-header">
-            <h2>4. Anonymized Preview</h2>
-            <span>Selected categories only</span>
-          </div>
-          <pre className="text-preview">{anonymizedText || "Run detection to preview replacements."}</pre>
-        </div>
-      </section>
-
-      {entityMenu && (
-        <EntityEditMenu
-          menu={entityMenu}
-          sourceText={text}
-          menuCategories={menuCategories}
-          categoryLabels={categoryLabels}
-          onScopeChange={setEntityMenuScope}
-          onAdd={handleAddEntity}
-          onAddCustom={handleAddCustomCategory}
-          onRemove={handleRemoveEntity}
-          onClose={closeEntityMenu}
-        />
-      )}
-
-      {reportOpen && (
-        <AuditReportWindow
-          report={auditReport}
-          onClose={() => setReportOpen(false)}
-          onCopy={copyAuditReport}
-          onDownload={downloadAuditReport}
-        />
-      )}
-    </main>
+        )}
+      </main>
     </>
   );
 }
