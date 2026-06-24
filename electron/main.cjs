@@ -219,11 +219,49 @@ ipcMain.handle("batch:anonymizeLabelStudio", async () => {
 });
 
 const TEXT_EXTENSIONS = new Set([".txt", ".text"]);
+const BATCH_OUTPUTS_DIR_PREFIX = "outputs";
 const OUTPUT_ARTIFACT_STEMS = ["-anonymized", "-report", "-label-studio"];
 const OUTPUT_ARTIFACT_NAMES = new Set([
   "batch-summary.json",
   "label-studio-ner-config.xml",
 ]);
+
+function formatBatchOutputTimestamp(date = new Date()) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+}
+
+function createUniqueBatchOutputDir(folderPath) {
+  const stamp = formatBatchOutputTimestamp();
+  let candidate = path.join(folderPath, `${BATCH_OUTPUTS_DIR_PREFIX}-${stamp}`);
+  let counter = 1;
+
+  while (fs.existsSync(candidate)) {
+    candidate = path.join(folderPath, `${BATCH_OUTPUTS_DIR_PREFIX}-${stamp}-${counter}`);
+    counter += 1;
+  }
+
+  fs.mkdirSync(candidate, { recursive: true });
+  return candidate;
+}
+
+function buildBatchOutputPaths(outputDir, stem, modified = false) {
+  const suffix = modified ? "_modified" : "";
+  return {
+    anonymizedPath: path.join(outputDir, `${stem}-anonymized${suffix}.txt`),
+    reportPath: path.join(outputDir, `${stem}-report${suffix}.md`),
+    labelStudioPath: path.join(outputDir, `${stem}-label-studio${suffix}.json`),
+  };
+}
+
+function removeBatchOutputVariant(outputDir, stem, modified) {
+  const paths = buildBatchOutputPaths(outputDir, stem, modified);
+  for (const filePath of [paths.anonymizedPath, paths.reportPath, paths.labelStudioPath]) {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  }
+}
 
 function isSourceTextFile(filePath) {
   const extension = path.extname(filePath).toLowerCase();
@@ -273,18 +311,35 @@ ipcMain.handle("batch:loadTextFolder", async () => {
     );
   }
 
+  const outputDir = createUniqueBatchOutputDir(folderPath);
+
   return {
     canceled: false,
     folderPath,
+    outputDir,
     files,
   };
 });
 
 ipcMain.handle(
   "batch:writeOutputs",
-  async (_event, { sourcePath, anonymizedText, auditReport, labelStudioJson, labelStudioConfig }) => {
+  async (
+    _event,
+    {
+      sourcePath,
+      outputDir,
+      modified = false,
+      anonymizedText,
+      auditReport,
+      labelStudioJson,
+      labelStudioConfig,
+    },
+  ) => {
     if (typeof sourcePath !== "string" || !sourcePath.trim()) {
       throw new Error("Expected a source file path for batch output.");
+    }
+    if (typeof outputDir !== "string" || !outputDir.trim()) {
+      throw new Error("Expected an output directory for batch output.");
     }
     if (typeof anonymizedText !== "string" || typeof auditReport !== "string") {
       throw new Error("Expected anonymized text and audit report content.");
@@ -295,11 +350,21 @@ ipcMain.handle(
 
     const extension = path.extname(sourcePath);
     const stem = path.basename(sourcePath, extension);
-    const outputDir = path.dirname(sourcePath);
-    const anonymizedPath = path.join(outputDir, `${stem}-anonymized.txt`);
-    const reportPath = path.join(outputDir, `${stem}-report.md`);
-    const labelStudioPath = path.join(outputDir, `${stem}-label-studio.json`);
-    const labelStudioConfigPath = path.join(outputDir, "label-studio-ner-config.xml");
+    const resolvedOutputDir = path.resolve(outputDir);
+    fs.mkdirSync(resolvedOutputDir, { recursive: true });
+
+    if (modified) {
+      removeBatchOutputVariant(resolvedOutputDir, stem, false);
+    } else {
+      removeBatchOutputVariant(resolvedOutputDir, stem, true);
+    }
+
+    const { anonymizedPath, reportPath, labelStudioPath } = buildBatchOutputPaths(
+      resolvedOutputDir,
+      stem,
+      modified,
+    );
+    const labelStudioConfigPath = path.join(resolvedOutputDir, "label-studio-ner-config.xml");
 
     fs.writeFileSync(anonymizedPath, anonymizedText, "utf8");
     fs.writeFileSync(reportPath, auditReport, "utf8");
@@ -314,6 +379,7 @@ ipcMain.handle(
       reportPath,
       labelStudioPath,
       labelStudioConfigPath: fs.existsSync(labelStudioConfigPath) ? labelStudioConfigPath : null,
+      modified,
     };
   },
 );

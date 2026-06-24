@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   createLabelStudioExport,
   LABEL_STUDIO_NER_CONFIG,
@@ -40,6 +40,329 @@ const NER_BACKENDS = {
   camembert: "CamemBERT NER (Jean-Baptiste/camembert-ner)",
 };
 
+const BUILTIN_CATEGORY_IDS = new Set(Object.keys(CATEGORY_LABELS));
+
+function slugifyCategoryId(name) {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 40);
+
+  return slug || "custom";
+}
+
+function formatCategoryDisplayName(categoryId) {
+  return categoryId
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function categoryPrefixFromLabel(label) {
+  const prefix = label
+    .trim()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 24);
+
+  return prefix || "CUSTOM";
+}
+
+function createCustomCategoryId(displayName, customCategories) {
+  let baseId = slugifyCategoryId(displayName);
+  if (!CATEGORY_LABELS[baseId] && !customCategories[baseId]) {
+    return baseId;
+  }
+
+  let suffix = 2;
+  while (CATEGORY_LABELS[`${baseId}_${suffix}`] || customCategories[`${baseId}_${suffix}`]) {
+    suffix += 1;
+  }
+
+  return `${baseId}_${suffix}`;
+}
+
+function inferCustomCategoriesFromEntities(entities, customCategories = {}) {
+  const inferred = { ...customCategories };
+
+  entities.forEach((entity) => {
+    const categoryId = entity.label;
+    if (categoryId && !CATEGORY_LABELS[categoryId] && !inferred[categoryId]) {
+      inferred[categoryId] = formatCategoryDisplayName(categoryId);
+    }
+  });
+
+  return inferred;
+}
+
+function buildCategoryLabels(customCategories) {
+  return { ...CATEGORY_LABELS, ...customCategories };
+}
+
+function buildMenuCategories(customCategories) {
+  return [
+    ...Object.entries(CATEGORY_LABELS),
+    ...Object.entries(customCategories)
+      .filter(([categoryId]) => !CATEGORY_LABELS[categoryId])
+      .sort(([, left], [, right]) => left.localeCompare(right)),
+  ];
+}
+
+function getCategoryLabel(categoryId, customCategories) {
+  return buildCategoryLabels(customCategories)[categoryId] || categoryId;
+}
+
+function getCategoryPrefix(categoryId, customCategories) {
+  if (CATEGORY_PREFIXES[categoryId]) {
+    return CATEGORY_PREFIXES[categoryId];
+  }
+
+  return categoryPrefixFromLabel(getCategoryLabel(categoryId, customCategories));
+}
+
+function getCategoryChipClass(categoryId) {
+  return BUILTIN_CATEGORY_IDS.has(categoryId) ? `chip-${categoryId}` : "chip-custom";
+}
+
+function getCategoryHighlightClass(categoryId) {
+  return BUILTIN_CATEGORY_IDS.has(categoryId) ? `highlight-${categoryId}` : "highlight-custom";
+}
+
+function isManualEntity(entity) {
+  return entity?.source === "manual";
+}
+
+function formatProvenanceLabel(source) {
+  if (!source || source === "manual") {
+    return "Human manual review";
+  }
+
+  if (source === "rule") {
+    return "Automatic detection (rule-based pattern)";
+  }
+
+  return `Automatic detection (${source})`;
+}
+
+function getSpansForValue(entities, category, value) {
+  const normalized = value.toLocaleLowerCase();
+  return entities.filter(
+    (entity) =>
+      entity.label === category && entity.text.toLocaleLowerCase() === normalized,
+  );
+}
+
+function summarizeSpanProvenance(entities, category, value) {
+  const spans = getSpansForValue(entities, category, value);
+  const manualSpans = spans.filter(isManualEntity);
+  const machineSpans = spans.filter((entity) => !isManualEntity(entity));
+  const machineBySource = machineSpans.reduce((counts, entity) => {
+    const key = entity.source || "unknown";
+    counts[key] = (counts[key] || 0) + 1;
+    return counts;
+  }, {});
+
+  return {
+    spans,
+    manualSpans,
+    machineSpans,
+    machineBySource,
+  };
+}
+
+function formatSpanProvenanceDetail(provenance) {
+  const parts = Object.entries(provenance.machineBySource)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([source, count]) => `${count} automatic (${source})`);
+
+  if (provenance.manualSpans.length) {
+    parts.push(`${provenance.manualSpans.length} manual`);
+  }
+
+  return parts.join(", ") || "unknown";
+}
+
+function summarizeDocumentProvenance(entities) {
+  const manualSpans = entities.filter(isManualEntity);
+  const machineSpans = entities.filter((entity) => !isManualEntity(entity));
+  const machineBySource = machineSpans.reduce((counts, entity) => {
+    const key = entity.source || "unknown";
+    counts[key] = (counts[key] || 0) + 1;
+    return counts;
+  }, {});
+
+  const manualValues = new Set(
+    manualSpans.map((entity) => `${entity.label}:${entity.text.toLocaleLowerCase()}`),
+  );
+  const machineValues = new Set(
+    machineSpans.map((entity) => `${entity.label}:${entity.text.toLocaleLowerCase()}`),
+  );
+
+  let mixedValueCount = 0;
+  manualValues.forEach((key) => {
+    if (machineValues.has(key)) {
+      mixedValueCount += 1;
+    }
+  });
+
+  return {
+    manualSpans,
+    machineSpans,
+    machineBySource,
+    manualOnlyValues: manualValues.size - mixedValueCount,
+    machineOnlyValues: machineValues.size - mixedValueCount,
+    mixedValues: mixedValueCount,
+  };
+}
+
+function formatSpanOffset(start, end) {
+  return `${start}–${end}`;
+}
+
+function formatSpanPositionLines(spans) {
+  if (!spans.length) {
+    return "";
+  }
+
+  return [...spans]
+    .sort((left, right) => left.start - right.start || left.end - right.end)
+    .map((span) => {
+      const sourceLabel = isManualEntity(span) ? "manual" : span.source || "unknown";
+      return `  - chars ${formatSpanOffset(span.start, span.end)}: ${sourceLabel}`;
+    })
+    .join("\n");
+}
+
+function formatValueDecisionLine({
+  category,
+  customCategories,
+  value,
+  replacement,
+  occurrences,
+  provenance,
+  status,
+}) {
+  const label = getCategoryLabel(category, customCategories);
+  const provenanceDetail = formatSpanProvenanceDetail(provenance);
+  const origin =
+    provenance.manualSpans.length && provenance.machineSpans.length
+      ? "mixed origin"
+      : provenance.manualSpans.length
+        ? "human manual review"
+        : "automatic detection";
+  const positionLines = formatSpanPositionLines(provenance.spans);
+
+  let header;
+  if (status === "replaced") {
+    header = `- ${label}: "${value}" -> ${replacement} (${occurrences} span${occurrences === 1 ? "" : "s"}, ${provenanceDetail}; origin: ${origin})`;
+  } else {
+    header = `- ${label}: "${value}" kept unchanged (${occurrences} span${occurrences === 1 ? "" : "s"}, ${provenanceDetail}; origin: ${origin}; toggled off during review)`;
+  }
+
+  return positionLines ? `${header}\n${positionLines}` : header;
+}
+
+function formatSpanIndexLines(entities, selectedCategories, excludedEntityKeys, customCategories) {
+  return [...entities]
+    .sort((left, right) => left.start - right.start || left.end - right.end)
+    .map((entity) => {
+      const label = getCategoryLabel(entity.label, customCategories);
+      const sourceLabel = isManualEntity(entity) ? "manual" : entity.source || "unknown";
+      const active = isEntityActive(entity, selectedCategories, excludedEntityKeys);
+      const status = active ? "replaced in output" : "excluded from output";
+      return `- chars ${formatSpanOffset(entity.start, entity.end)} | ${label} | "${entity.text}" | ${sourceLabel} | ${status}`;
+    });
+}
+
+function createCategorySelectionFromEntities(entities) {
+  return Object.fromEntries(
+    [...new Set(entities.map((entity) => entity.label))].map((label) => [label, true]),
+  );
+}
+
+function buildBatchFileOutputs({
+  sourceFileName,
+  fileText,
+  entities,
+  selectedCategories,
+  excludedEntityKeys,
+  customCategories,
+  modelName,
+  nerBackend,
+}) {
+  const grouped = groupEntities(entities);
+  const anonymizedText = replaceSelectedCategories(
+    fileText,
+    entities,
+    grouped,
+    selectedCategories,
+    excludedEntityKeys,
+    customCategories,
+  );
+  const activeEntities = entities.filter((entity) =>
+    isEntityActive(entity, selectedCategories, excludedEntityKeys),
+  );
+  const auditReport = createAuditReport({
+    text: fileText,
+    entities,
+    anonymizedText,
+    groupedEntities: grouped,
+    selectedCategories,
+    excludedEntityKeys,
+    modelName,
+    sourceFile: sourceFileName,
+    nerBackend,
+    batchMode: true,
+    customCategories,
+  });
+  const labelStudioJson = JSON.stringify(
+    createLabelStudioExport({
+      text: fileText,
+      entities: activeEntities,
+      modelName,
+      nerBackend,
+      sourceFile: sourceFileName,
+      customCategories,
+    }),
+    null,
+    2,
+  );
+
+  return { anonymizedText, auditReport, labelStudioJson };
+}
+
+function findBatchFileIndex(files, query) {
+  const trimmed = query.trim();
+  if (!trimmed || !files.length) {
+    return -1;
+  }
+
+  let index = files.findIndex((file) => file.name === trimmed);
+  if (index >= 0) {
+    return index;
+  }
+
+  const lower = trimmed.toLocaleLowerCase();
+  index = files.findIndex((file) => file.name.toLocaleLowerCase() === lower);
+  if (index >= 0) {
+    return index;
+  }
+
+  const partialMatches = files
+    .map((file, fileIndex) => ({ file, fileIndex }))
+    .filter(({ file }) => file.name.toLocaleLowerCase().includes(lower));
+
+  return partialMatches.length === 1 ? partialMatches[0].fileIndex : -1;
+}
+
 
 export default function App() {
   const [text, setText] = useState(SAMPLE_TEXT);
@@ -53,17 +376,66 @@ export default function App() {
   const [isBatchLoading, setIsBatchLoading] = useState(false);
   const [batchMode, setBatchMode] = useState(false);
   const [batchFolder, setBatchFolder] = useState(null);
+  const [batchOutputDir, setBatchOutputDir] = useState(null);
+  const [currentFileOutputsModified, setCurrentFileOutputsModified] = useState(false);
+  const [jumpFileNumber, setJumpFileNumber] = useState("1");
+  const [jumpFileName, setJumpFileName] = useState("");
   const [batchFiles, setBatchFiles] = useState([]);
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
   const [autoRunNer, setAutoRunNer] = useState(true);
   const [status, setStatus] = useState("Paste text, choose a NER backend, then run detection.");
   const [error, setError] = useState("");
   const [entityMenu, setEntityMenu] = useState(null);
+  const [customCategories, setCustomCategories] = useState({});
 
   const fileStatesRef = useRef({});
+  const batchCustomCategoriesRef = useRef({});
+  const entityMenuRef = useRef(null);
   const writeTimeoutRef = useRef(null);
   const currentFile = batchFiles[currentFileIndex] || null;
 
+  function syncCustomCategories(next, batchScoped = batchMode) {
+    setCustomCategories(next);
+    if (batchScoped) {
+      batchCustomCategoriesRef.current = next;
+    }
+  }
+
+  function mergeCustomCategories(partial) {
+    const base = batchMode ? batchCustomCategoriesRef.current : customCategories;
+    const next = { ...base, ...partial };
+    syncCustomCategories(next, batchMode);
+    return next;
+  }
+
+  function resolveCustomCategoriesForBatch(nextEntities, savedState) {
+    return inferCustomCategoriesFromEntities(nextEntities, {
+      ...batchCustomCategoriesRef.current,
+      ...(savedState?.customCategories ?? {}),
+    });
+  }
+
+  useEffect(() => {
+    entityMenuRef.current = entityMenu;
+  }, [entityMenu]);
+
+  useEffect(() => {
+    if (!batchMode || !currentFile) {
+      return;
+    }
+
+    setJumpFileNumber(String(currentFileIndex + 1));
+    setJumpFileName(currentFile.name);
+  }, [batchMode, currentFile, currentFileIndex]);
+
+  const categoryLabels = useMemo(
+    () => buildCategoryLabels(customCategories),
+    [customCategories],
+  );
+  const menuCategories = useMemo(
+    () => buildMenuCategories(customCategories),
+    [customCategories],
+  );
   const groupedEntities = useMemo(() => groupEntities(entities), [entities]);
   const highlightedSegments = useMemo(
     () => createHighlightSegments(text, entities),
@@ -77,8 +449,9 @@ export default function App() {
         groupedEntities,
         selectedCategories,
         excludedEntityKeys,
+        customCategories,
       ),
-    [text, entities, groupedEntities, selectedCategories, excludedEntityKeys],
+    [text, entities, groupedEntities, selectedCategories, excludedEntityKeys, customCategories],
   );
   const activeEntities = useMemo(
     () =>
@@ -91,6 +464,7 @@ export default function App() {
     () =>
       createAuditReport({
         text,
+        entities,
         anonymizedText,
         groupedEntities,
         selectedCategories,
@@ -99,9 +473,11 @@ export default function App() {
         sourceFile: currentFile?.name || null,
         nerBackend: batchMode ? nerBackend : null,
         batchMode,
+        customCategories,
       }),
     [
       text,
+      entities,
       anonymizedText,
       groupedEntities,
       selectedCategories,
@@ -110,6 +486,7 @@ export default function App() {
       currentFile,
       nerBackend,
       batchMode,
+      customCategories,
     ],
   );
   const labelStudioExport = useMemo(
@@ -120,8 +497,9 @@ export default function App() {
         modelName,
         nerBackend,
         sourceFile: currentFile?.name || null,
+        customCategories,
       }),
-    [text, activeEntities, modelName, nerBackend, currentFile],
+    [text, activeEntities, modelName, nerBackend, currentFile, customCategories],
   );
   const labelStudioJson = useMemo(
     () => JSON.stringify(labelStudioExport, null, 2),
@@ -129,7 +507,7 @@ export default function App() {
   );
 
   useEffect(() => {
-    if (!batchMode || !currentFile || !window.nerApi?.writeBatchOutputs) {
+    if (!batchMode || !currentFile || !batchOutputDir || !window.nerApi?.writeBatchOutputs) {
       return undefined;
     }
 
@@ -139,12 +517,8 @@ export default function App() {
 
     writeTimeoutRef.current = setTimeout(async () => {
       try {
-        await window.nerApi.writeBatchOutputs({
-          sourcePath: currentFile.path,
-          anonymizedText,
-          auditReport,
-          labelStudioJson,
-          labelStudioConfig: LABEL_STUDIO_NER_CONFIG,
+        await writeBatchOutputsForFile(currentFile, {
+          modified: currentFileOutputsModified,
         });
       } catch (caughtError) {
         setError(caughtError.message);
@@ -156,20 +530,61 @@ export default function App() {
         clearTimeout(writeTimeoutRef.current);
       }
     };
-  }, [batchMode, currentFile, anonymizedText, auditReport, labelStudioJson]);
+  }, [
+    batchMode,
+    currentFile,
+    batchOutputDir,
+    currentFileOutputsModified,
+    anonymizedText,
+    auditReport,
+    labelStudioJson,
+  ]);
 
-  async function writeCurrentBatchOutputs() {
-    if (!batchMode || !currentFile || !window.nerApi?.writeBatchOutputs) {
+  async function writeBatchOutputsForFile(
+    file,
+    {
+      modified,
+      fileText = text,
+      fileEntities = entities,
+      fileSelectedCategories = selectedCategories,
+      fileExcludedEntityKeys = excludedEntityKeys,
+      fileCustomCategories = customCategories,
+      fileModelName = modelName,
+    },
+  ) {
+    if (!batchOutputDir || !window.nerApi?.writeBatchOutputs) {
       return;
     }
 
+    const { anonymizedText: nextAnonymizedText, auditReport: nextAuditReport, labelStudioJson: nextLabelStudioJson } =
+      buildBatchFileOutputs({
+        sourceFileName: file.name,
+        fileText,
+        entities: fileEntities,
+        selectedCategories: fileSelectedCategories,
+        excludedEntityKeys: fileExcludedEntityKeys,
+        customCategories: fileCustomCategories,
+        modelName: fileModelName,
+        nerBackend,
+      });
+
     await window.nerApi.writeBatchOutputs({
-      sourcePath: currentFile.path,
-      anonymizedText,
-      auditReport,
-      labelStudioJson,
+      sourcePath: file.path,
+      outputDir: batchOutputDir,
+      modified,
+      anonymizedText: nextAnonymizedText,
+      auditReport: nextAuditReport,
+      labelStudioJson: nextLabelStudioJson,
       labelStudioConfig: LABEL_STUDIO_NER_CONFIG,
     });
+  }
+
+  async function writeCurrentBatchOutputs(modified = currentFileOutputsModified) {
+    if (!batchMode || !currentFile) {
+      return;
+    }
+
+    await writeBatchOutputsForFile(currentFile, { modified });
   }
 
   function persistCurrentFileState() {
@@ -183,15 +598,29 @@ export default function App() {
       selectedCategories,
       excludedEntityKeys,
       modelName,
+      outputsModified: currentFileOutputsModified,
     };
   }
 
-  function applyFileState(file, savedState) {
+  function applyFileState(file, savedState, options = {}) {
+    const { isBatchNavigation = batchMode } = options;
+    const nextEntities = savedState?.entities ?? [];
     setText(savedState?.text ?? file.text);
-    setEntities(savedState?.entities ?? []);
+    setEntities(nextEntities);
     setSelectedCategories(savedState?.selectedCategories ?? {});
     setExcludedEntityKeys(savedState?.excludedEntityKeys ?? {});
     setModelName(savedState?.modelName ?? null);
+    setCurrentFileOutputsModified(savedState?.outputsModified ?? false);
+
+    if (isBatchNavigation) {
+      syncCustomCategories(resolveCustomCategoriesForBatch(nextEntities, savedState), true);
+    } else {
+      syncCustomCategories(
+        inferCustomCategoriesFromEntities(nextEntities, savedState?.customCategories ?? {}),
+        false,
+      );
+      batchCustomCategoriesRef.current = {};
+    }
     setEntityMenu(null);
     setReportOpen(false);
     setError("");
@@ -203,9 +632,21 @@ export default function App() {
     }
 
     persistCurrentFileState();
+    fileStatesRef.current[currentFile.path] = {
+      ...fileStatesRef.current[currentFile.path],
+      outputsModified: true,
+    };
 
     try {
-      await writeCurrentBatchOutputs();
+      await writeBatchOutputsForFile(currentFile, {
+        modified: true,
+        fileText: text,
+        fileEntities: entities,
+        fileSelectedCategories: selectedCategories,
+        fileExcludedEntityKeys: excludedEntityKeys,
+        fileCustomCategories: customCategories,
+        fileModelName: modelName,
+      });
     } catch (caughtError) {
       setError(caughtError.message);
     }
@@ -226,6 +667,88 @@ export default function App() {
     }
 
     setStatus(`File ${index + 1} of ${batchFiles.length}: ${file.name}`);
+  }
+
+  async function handleJumpToFileNumber(event) {
+    event?.preventDefault();
+
+    if (!batchMode || isBatchLoading || isDetecting) {
+      return;
+    }
+
+    const parsed = Number(jumpFileNumber);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > batchFiles.length) {
+      setStatus(`Enter a file number between 1 and ${batchFiles.length}.`);
+      return;
+    }
+
+    await goToFile(parsed - 1);
+  }
+
+  async function handleJumpToFileName(event) {
+    event?.preventDefault();
+
+    if (!batchMode || isBatchLoading || isDetecting) {
+      return;
+    }
+
+    const index = findBatchFileIndex(batchFiles, jumpFileName);
+    if (index < 0) {
+      setStatus(`No file matches "${jumpFileName.trim()}".`);
+      return;
+    }
+
+    await goToFile(index);
+  }
+
+  async function processInitialBatchFolder(files, outputDir, backend) {
+    if (!window.nerApi?.detectEntities || !window.nerApi?.writeBatchOutputs) {
+      throw new Error("Batch processing is only available in the Electron app.");
+    }
+
+    setIsDetecting(true);
+
+    try {
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index];
+        setStatus(`Initial processing: ${index + 1} of ${files.length} — ${file.name}...`);
+
+        const result = await window.nerApi.detectEntities(file.text, backend);
+        const normalized = normalizeEntities(result.entities || [], file.text);
+        const categorySelection = createCategorySelectionFromEntities(normalized);
+        const { anonymizedText, auditReport, labelStudioJson } = buildBatchFileOutputs({
+          sourceFileName: file.name,
+          fileText: file.text,
+          entities: normalized,
+          selectedCategories: categorySelection,
+          excludedEntityKeys: {},
+          customCategories: {},
+          modelName: result.model,
+          nerBackend: backend,
+        });
+
+        await window.nerApi.writeBatchOutputs({
+          sourcePath: file.path,
+          outputDir,
+          modified: false,
+          anonymizedText,
+          auditReport,
+          labelStudioJson,
+          labelStudioConfig: LABEL_STUDIO_NER_CONFIG,
+        });
+
+        fileStatesRef.current[file.path] = {
+          text: file.text,
+          entities: normalized,
+          selectedCategories: categorySelection,
+          excludedEntityKeys: {},
+          modelName: result.model,
+          outputsModified: false,
+        };
+      }
+    } finally {
+      setIsDetecting(false);
+    }
   }
 
   async function loadBatchFolder() {
@@ -252,22 +775,20 @@ export default function App() {
       }
 
       fileStatesRef.current = {};
+      batchCustomCategoriesRef.current = {};
       setBatchMode(true);
       setBatchFolder(result.folderPath);
+      setBatchOutputDir(result.outputDir);
       setBatchFiles(result.files);
       setCurrentFileIndex(0);
-      applyFileState(result.files[0], null);
+      syncCustomCategories({});
+      await processInitialBatchFolder(result.files, result.outputDir, nerBackend);
+      applyFileState(result.files[0], fileStatesRef.current[result.files[0].path], {
+        isBatchNavigation: true,
+      });
       setStatus(
-        `Loaded ${result.files.length} file(s) from ${result.folderPath}. Outputs update live in the same folder.`,
+        `Loaded and processed ${result.files.length} file(s). Initial outputs are in ${result.outputDir}.`,
       );
-
-      if (autoRunNer) {
-        await runNerDetection({
-          sourceText: result.files[0].text,
-          fileName: result.files[0].name,
-          filePosition: `1 of ${result.files.length}`,
-        });
-      }
     } catch (caughtError) {
       setError(caughtError.message);
       setStatus("Batch folder loading failed.");
@@ -279,24 +800,40 @@ export default function App() {
   async function exitBatchMode() {
     if (batchMode && currentFile) {
       persistCurrentFileState();
+      fileStatesRef.current[currentFile.path] = {
+        ...fileStatesRef.current[currentFile.path],
+        outputsModified: true,
+      };
 
       try {
-        await writeCurrentBatchOutputs();
+        await writeBatchOutputsForFile(currentFile, {
+          modified: true,
+          fileText: text,
+          fileEntities: entities,
+          fileSelectedCategories: selectedCategories,
+          fileExcludedEntityKeys: excludedEntityKeys,
+          fileCustomCategories: customCategories,
+          fileModelName: modelName,
+        });
       } catch (caughtError) {
         setError(caughtError.message);
       }
     }
 
     fileStatesRef.current = {};
+    batchCustomCategoriesRef.current = {};
     setBatchMode(false);
     setBatchFolder(null);
+    setBatchOutputDir(null);
     setBatchFiles([]);
     setCurrentFileIndex(0);
+    setCurrentFileOutputsModified(false);
     setText(SAMPLE_TEXT);
     setEntities([]);
     setSelectedCategories({});
     setExcludedEntityKeys({});
     setModelName(null);
+    setCustomCategories({});
     setEntityMenu(null);
     setReportOpen(false);
     setStatus("Batch mode closed. Restored the sample text.");
@@ -343,9 +880,7 @@ export default function App() {
 
       const result = await window.nerApi.detectEntities(textToAnalyze, backend);
       const normalized = normalizeEntities(result.entities || [], textToAnalyze);
-      const categorySelection = Object.fromEntries(
-        [...new Set(normalized.map((entity) => entity.label))].map((label) => [label, true]),
-      );
+      const categorySelection = createCategorySelectionFromEntities(normalized);
 
       setEntities(normalized);
       setSelectedCategories(categorySelection);
@@ -518,26 +1053,65 @@ export default function App() {
   }
 
   function closeEntityMenu() {
+    entityMenuRef.current = null;
     setEntityMenu(null);
   }
 
-  function handleAddEntity(label) {
-    if (!entityMenu || entityMenu.mode !== "add") return;
+  function setEntityMenuScope(scope) {
+    setEntityMenu((current) => {
+      if (!current) {
+        return current;
+      }
 
-    const next = addEntitySpan(entities, {
-      start: entityMenu.start,
-      end: entityMenu.end,
-      text: entityMenu.text,
-      label,
-    }, text);
+      const next = { ...current, scope };
+      entityMenuRef.current = next;
+      return next;
+    });
+  }
+
+  function addManualEntity(categoryId, displayLabel = null) {
+    const menu = entityMenuRef.current;
+    if (!menu || menu.mode !== "add") return;
+
+    const scope = menu.scope === "single" ? "single" : "all";
+    const spans =
+      scope === "single"
+        ? [{ start: menu.start, end: menu.end, text: menu.text }]
+        : findAllOccurrenceRanges(text, menu.text);
+
+    const next = addEntitySpans(entities, spans, categoryId, text);
 
     setEntities(next);
     setSelectedCategories((current) => ({
       ...current,
-      [label]: current[label] ?? true,
+      [categoryId]: current[categoryId] ?? true,
     }));
     closeEntityMenu();
-    setStatus(`Added ${CATEGORY_LABELS[label] || label} entity "${entityMenu.text}".`);
+    const count = spans.length;
+    const scopeNote =
+      count === 1 ? "" : scope === "all" ? ` (${count} occurrences)` : " (this selection only)";
+    setStatus(
+      `Added ${displayLabel || getCategoryLabel(categoryId, customCategories)} entity "${menu.text}"${scopeNote}.`,
+    );
+  }
+
+  function handleAddEntity(label) {
+    addManualEntity(label);
+  }
+
+  function handleAddCustomCategory(displayName) {
+    const trimmed = displayName.trim();
+    const menu = entityMenuRef.current;
+    if (!trimmed || !menu || menu.mode !== "add") {
+      return;
+    }
+
+    const categoryId = createCustomCategoryId(
+      trimmed,
+      batchMode ? batchCustomCategoriesRef.current : customCategories,
+    );
+    addManualEntity(categoryId, trimmed);
+    mergeCustomCategories({ [categoryId]: trimmed });
   }
 
   function handleRemoveEntity() {
@@ -714,9 +1288,10 @@ export default function App() {
           <div>
             <h2>Batch text folder</h2>
             <p className="batch-description">
-              Load a folder of <code>.txt</code> or <code>.text</code> files, review each
-              document in the editor, then navigate with previous/next. Anonymized text and
-              audit reports are written live beside each source file.
+              Load a folder of <code>.txt</code> or <code>.text</code> files. Each load creates a
+              new timestamped <code>outputs-YYYYMMDD-HHMMSS</code> subfolder, runs the selected model
+              on every file, then review each document with previous/next navigation or jump directly
+              to a file number or name.
             </p>
           </div>
           <button onClick={loadBatchFolder} disabled={isDetecting || isBatchLoading}>
@@ -725,27 +1300,74 @@ export default function App() {
         </div>
 
         {batchMode ? (
-          <div className="batch-navigation">
-            <button
-              onClick={() => goToFile(currentFileIndex - 1)}
-              disabled={currentFileIndex === 0 || isBatchLoading || isDetecting}
-            >
-              Previous file
-            </button>
-            <div className="batch-file-indicator">
-              <strong>
-                {currentFileIndex + 1} / {batchFiles.length}
-              </strong>
-              <span>{currentFile?.name}</span>
-              <small>{batchFolder}</small>
+          <>
+            <div className="batch-navigation">
+              <button
+                onClick={() => goToFile(currentFileIndex - 1)}
+                disabled={currentFileIndex === 0 || isBatchLoading || isDetecting}
+              >
+                Previous file
+              </button>
+              <div className="batch-file-indicator">
+                <strong>
+                  {currentFileIndex + 1} / {batchFiles.length}
+                </strong>
+                <span>{currentFile?.name}</span>
+                <small>{batchFolder}</small>
+                {batchOutputDir ? <small>{batchOutputDir}</small> : null}
+              </div>
+              <button
+                onClick={() => goToFile(currentFileIndex + 1)}
+                disabled={currentFileIndex >= batchFiles.length - 1 || isBatchLoading || isDetecting}
+              >
+                Next file
+              </button>
             </div>
-            <button
-              onClick={() => goToFile(currentFileIndex + 1)}
-              disabled={currentFileIndex >= batchFiles.length - 1 || isBatchLoading || isDetecting}
-            >
-              Next file
-            </button>
-          </div>
+
+            <div className="batch-jump-controls">
+              <form className="batch-jump-field" onSubmit={handleJumpToFileNumber}>
+                <label htmlFor="batch-jump-number">Go to file #</label>
+                <div className="batch-jump-row">
+                  <input
+                    id="batch-jump-number"
+                    type="number"
+                    min={1}
+                    max={batchFiles.length}
+                    value={jumpFileNumber}
+                    onChange={(event) => setJumpFileNumber(event.target.value)}
+                    disabled={isBatchLoading || isDetecting}
+                  />
+                  <button type="submit" disabled={isBatchLoading || isDetecting}>
+                    Go
+                  </button>
+                </div>
+              </form>
+
+              <form className="batch-jump-field" onSubmit={handleJumpToFileName}>
+                <label htmlFor="batch-jump-name">Go to file name</label>
+                <div className="batch-jump-row">
+                  <input
+                    id="batch-jump-name"
+                    list="batch-file-list"
+                    value={jumpFileName}
+                    onChange={(event) => setJumpFileName(event.target.value)}
+                    placeholder="Type or pick a file name"
+                    disabled={isBatchLoading || isDetecting}
+                  />
+                  <datalist id="batch-file-list">
+                    {batchFiles.map((file, index) => (
+                      <option key={file.path} value={file.name}>
+                        {index + 1}. {file.name}
+                      </option>
+                    ))}
+                  </datalist>
+                  <button type="submit" disabled={isBatchLoading || isDetecting}>
+                    Go
+                  </button>
+                </div>
+              </form>
+            </div>
+          </>
         ) : null}
 
         <label className="batch-auto-ner">
@@ -756,16 +1378,17 @@ export default function App() {
             disabled={isDetecting}
           />
           <span>
-            Auto-run default model on each file
-            <small>Uses {NER_BACKENDS[nerBackend]} for new files only.</small>
+            Auto-run default model when opening an unprocessed file
+            <small>Uses {NER_BACKENDS[nerBackend]} for files without saved detections.</small>
           </span>
         </label>
 
         <p className="batch-output-note">
-          Live outputs per file: <code>*-anonymized.txt</code>, <code>*-report.md</code>, and{" "}
-          <code>*-label-studio.json</code> in the same folder, plus shared{" "}
-          <code>label-studio-ner-config.xml</code>. Run NER and adjust entity categories for each
-          document before moving on.
+          Initial outputs per file: <code>*-anonymized.txt</code>, <code>*-report.md</code>, and{" "}
+          <code>*-label-studio.json</code> in the current timestamped outputs folder, plus shared{" "}
+          <code>label-studio-ner-config.xml</code>. When you switch to another file, the file you
+          leave is saved with a <code>_modified</code> suffix (for example{" "}
+          <code>*-anonymized_modified.txt</code>).
         </p>
       </section>
 
@@ -819,8 +1442,9 @@ export default function App() {
             </span>
           </div>
           <CategoryReview
-            text={text}
+            entities={entities}
             groupedEntities={groupedEntities}
+            categoryLabels={categoryLabels}
             selectedCategories={selectedCategories}
             excludedEntityKeys={excludedEntityKeys}
             onToggleCategory={toggleCategory}
@@ -834,27 +1458,33 @@ export default function App() {
           <div className="panel-header">
             <h2>3. Highlighted Entities</h2>
             <span>
-              {entities.length} spans · select text to add · click highlight to remove
+              {entities.length} spans · select text to add (all word matches by default) · click highlight to remove
             </span>
           </div>
           <HighlightedText
             text={text}
             segments={highlightedSegments}
+            categoryLabels={categoryLabels}
             selectedCategories={selectedCategories}
             excludedEntityKeys={excludedEntityKeys}
-            onAddSelection={(selection) =>
-              setEntityMenu({
+            onAddSelection={(selection) => {
+              const nextMenu = {
                 mode: "add",
+                scope: "all",
                 ...selection,
-              })
-            }
-            onEntityClick={(entity, position) =>
-              setEntityMenu({
+              };
+              entityMenuRef.current = nextMenu;
+              setEntityMenu(nextMenu);
+            }}
+            onEntityClick={(entity, position) => {
+              const nextMenu = {
                 mode: "remove",
                 entity,
                 ...position,
-              })
-            }
+              };
+              entityMenuRef.current = nextMenu;
+              setEntityMenu(nextMenu);
+            }}
           />
         </div>
 
@@ -870,7 +1500,12 @@ export default function App() {
       {entityMenu && (
         <EntityEditMenu
           menu={entityMenu}
+          sourceText={text}
+          menuCategories={menuCategories}
+          categoryLabels={categoryLabels}
+          onScopeChange={setEntityMenuScope}
           onAdd={handleAddEntity}
+          onAddCustom={handleAddCustomCategory}
           onRemove={handleRemoveEntity}
           onClose={closeEntityMenu}
         />
@@ -913,8 +1548,9 @@ function AuditReportWindow({ report, onClose, onCopy, onDownload }) {
 }
 
 function CategoryReview({
-  text,
+  entities,
   groupedEntities,
+  categoryLabels,
   selectedCategories,
   excludedEntityKeys,
   onToggleCategory,
@@ -925,7 +1561,7 @@ function CategoryReview({
   if (!categories.length) {
     return (
       <div className="empty-state">
-        Run NER to see detected entity categories here.
+        Run NER or add entities manually in the highlighted view below.
       </div>
     );
   }
@@ -941,13 +1577,13 @@ function CategoryReview({
               onChange={() => onToggleCategory(category)}
             />
             <span>
-              Replace {CATEGORY_LABELS[category] || category}
+              Replace {categoryLabels[category] || category}
               <small>{groupedEntities[category].length} unique value(s)</small>
             </span>
           </label>
           <div className="entity-chips">
             {groupedEntities[category].map((entity) => {
-              const occurrenceCount = countOccurrences(text, entity.text);
+              const occurrenceCount = countEntitySpans(entities, category, entity.text);
               const isActive =
                 Boolean(selectedCategories[category]) &&
                 !excludedEntityKeys[getEntityValueKey(category, entity.text)];
@@ -955,7 +1591,7 @@ function CategoryReview({
               return (
                 <button
                   type="button"
-                  className={`chip chip-${category} ${isActive ? "chip-active" : "chip-inactive"}`}
+                  className={`chip ${getCategoryChipClass(category)} ${isActive ? "chip-active" : "chip-inactive"}`}
                   key={entity.key}
                   onClick={() => onToggleEntity(category, entity.text)}
                   title={
@@ -977,7 +1613,60 @@ function CategoryReview({
   );
 }
 
-function EntityEditMenu({ menu, onAdd, onRemove, onClose }) {
+function EntityEditMenu({
+  menu,
+  sourceText,
+  menuCategories,
+  categoryLabels,
+  onScopeChange,
+  onAdd,
+  onAddCustom,
+  onRemove,
+  onClose,
+}) {
+  const menuRef = useRef(null);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [position, setPosition] = useState({ top: menu.y, left: menu.x });
+  const scope = menu.mode === "add" && menu.scope === "single" ? "single" : "all";
+  const occurrenceCount = useMemo(() => {
+    if (menu.mode !== "add" || typeof menu.text !== "string") {
+      return 0;
+    }
+
+    return countOccurrences(sourceText, menu.text);
+  }, [menu.mode, menu.text, sourceText]);
+
+  useEffect(() => {
+    setNewCategoryName("");
+  }, [menu.mode, menu.start, menu.end, menu.text, menu.entity?.id]);
+
+  useLayoutEffect(() => {
+    const element = menuRef.current;
+    if (!element) {
+      return;
+    }
+
+    const margin = 12;
+    const rect = element.getBoundingClientRect();
+    let top = menu.y;
+    let left = menu.x;
+
+    if (left + rect.width > window.innerWidth - margin) {
+      left = Math.max(margin, window.innerWidth - rect.width - margin);
+    }
+    if (top + rect.height > window.innerHeight - margin) {
+      top = Math.max(margin, window.innerHeight - rect.height - margin);
+    }
+    if (left < margin) {
+      left = margin;
+    }
+    if (top < margin) {
+      top = margin;
+    }
+
+    setPosition({ top, left });
+  }, [menu.x, menu.y, menu.text, menu.mode, menu.scope, menuCategories.length, occurrenceCount]);
+
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -991,7 +1680,8 @@ function EntityEditMenu({ menu, onAdd, onRemove, onClose }) {
     <div className="entity-menu-backdrop" onClick={onClose} role="presentation">
       <section
         className="entity-menu"
-        style={{ top: menu.y, left: menu.x }}
+        ref={menuRef}
+        style={{ top: position.top, left: position.left }}
         role="dialog"
         aria-label={menu.mode === "add" ? "Add entity" : "Remove entity"}
         onClick={(event) => event.stopPropagation()}
@@ -1000,23 +1690,85 @@ function EntityEditMenu({ menu, onAdd, onRemove, onClose }) {
           <>
             <p className="entity-menu-title">Add entity</p>
             <p className="entity-menu-selection">"{menu.text}"</p>
-            <div className="entity-menu-actions">
-              {Object.entries(CATEGORY_LABELS).map(([category, label]) => (
+            {occurrenceCount > 1 ? (
+              <>
+                <div className="entity-menu-scope" role="radiogroup" aria-label="Occurrence scope">
+                  <button
+                    className={`entity-menu-scope-option ${scope === "all" ? "active" : ""}`}
+                    type="button"
+                    role="radio"
+                    aria-checked={scope === "all"}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => onScopeChange("all")}
+                  >
+                    All word matches ({occurrenceCount})
+                  </button>
+                  <button
+                    className={`entity-menu-scope-option ${scope === "single" ? "active" : ""}`}
+                    type="button"
+                    role="radio"
+                    aria-checked={scope === "single"}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => onScopeChange("single")}
+                  >
+                    This selection only
+                  </button>
+                </div>
+                <p className="entity-menu-hint">
+                  Word matches are whole words/phrases, case-insensitive.
+                </p>
+              </>
+            ) : (
+              <p className="entity-menu-hint">1 whole-word match in this document.</p>
+            )}
+            <div className="entity-menu-columns">
+              <div className="entity-menu-main">
+                <p className="entity-menu-section-label">Categories</p>
+                <div className="entity-menu-actions">
+                  {menuCategories.map(([category, label]) => (
+                    <button
+                      key={category}
+                      className={`entity-menu-chip ${getCategoryChipClass(category)}`}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => onAdd(category)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <aside className="entity-menu-new-category-panel">
+                <p className="entity-menu-section-label">New category</p>
+                <input
+                  className="entity-menu-new-category-input"
+                  type="text"
+                  value={newCategoryName}
+                  placeholder="e.g. Profession"
+                  onChange={(event) => setNewCategoryName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && newCategoryName.trim()) {
+                      event.preventDefault();
+                      onAddCustom(newCategoryName);
+                    }
+                  }}
+                />
                 <button
-                  key={category}
-                  className={`entity-menu-chip chip-${category}`}
+                  className="entity-menu-new-category-submit"
                   type="button"
-                  onClick={() => onAdd(category)}
+                  disabled={!newCategoryName.trim()}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => onAddCustom(newCategoryName)}
                 >
-                  {label}
+                  Create & add
                 </button>
-              ))}
+              </aside>
             </div>
           </>
-        ) : (
+        ) : menu.entity ? (
           <>
             <p className="entity-menu-title">
-              {CATEGORY_LABELS[menu.entity.label] || menu.entity.label}
+              {categoryLabels[menu.entity.label] || formatCategoryDisplayName(menu.entity.label)}
             </p>
             <p className="entity-menu-selection">"{menu.entity.text}"</p>
             <p className="entity-menu-hint">Remove this detected span from the review.</p>
@@ -1024,7 +1776,7 @@ function EntityEditMenu({ menu, onAdd, onRemove, onClose }) {
               Remove entity
             </button>
           </>
-        )}
+        ) : null}
         <button className="secondary entity-menu-cancel" type="button" onClick={onClose}>
           Cancel
         </button>
@@ -1036,6 +1788,7 @@ function EntityEditMenu({ menu, onAdd, onRemove, onClose }) {
 function HighlightedText({
   text,
   segments,
+  categoryLabels,
   selectedCategories,
   excludedEntityKeys,
   onAddSelection,
@@ -1074,13 +1827,13 @@ function HighlightedText({
       {displaySegments.map((segment, index) =>
         segment.entity ? (
           <mark
-            className={`highlight highlight-${segment.entity.label} ${isEntityActive(segment.entity, selectedCategories, excludedEntityKeys)
+            className={`highlight ${getCategoryHighlightClass(segment.entity.label)} ${isEntityActive(segment.entity, selectedCategories, excludedEntityKeys)
               ? "selected"
               : "ignored"
               }`}
             data-start={segment.start}
             data-end={segment.end}
-            title={`${CATEGORY_LABELS[segment.entity.label] || segment.entity.label}: click to remove`}
+            title={`${categoryLabels[segment.entity.label] || segment.entity.label}: click to remove`}
             key={`${segment.entity.id || segment.start}-${index}`}
             onClick={(event) => {
               event.stopPropagation();
@@ -1165,21 +1918,76 @@ function normalizeEntities(entities, sourceText) {
     .sort((a, b) => a.start - b.start || a.end - b.end);
 }
 
-function addEntitySpan(entities, { start, end, text, label }, sourceText) {
-  const withoutOverlap = entities.filter(
-    (entity) => entity.end <= start || entity.start >= end,
+function addEntitySpans(entities, spans, label, sourceText) {
+  if (!spans.length) {
+    return entities;
+  }
+
+  const stamp = Date.now();
+  const newEntities = spans.map((span, index) => ({
+    id: `manual-${span.start}-${span.end}-${stamp}-${index}`,
+    start: span.start,
+    end: span.end,
+    text: span.text,
+    label,
+    source: "manual",
+  }));
+
+  const filtered = entities.filter(
+    (entity) =>
+      !newEntities.some(
+        (span) => entity.end > span.start && entity.start < span.end,
+      ),
   );
-  return normalizeEntities([
-    ...withoutOverlap,
-    {
-      id: `manual-${start}-${end}-${Date.now()}`,
-      start,
-      end,
-      text,
-      label,
-      source: "manual",
-    },
-  ], sourceText);
+
+  return normalizeEntities([...filtered, ...newEntities], sourceText);
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildWordBasedSearchPattern(searchText) {
+  if (typeof searchText !== "string" || !searchText.trim()) {
+    return null;
+  }
+
+  const words = searchText.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) {
+    return null;
+  }
+
+  return words.map(escapeRegExp).join("\\s+");
+}
+
+function findAllOccurrenceRanges(text, searchText) {
+  const pattern = buildWordBasedSearchPattern(searchText);
+  if (!text || !pattern) {
+    return [];
+  }
+
+  const regex = new RegExp(
+    `(?<![\\p{L}\\p{N}])${pattern}(?![\\p{L}\\p{N}])`,
+    "giu",
+  );
+
+  const ranges = [];
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    const matchedText = match[0];
+    ranges.push({
+      start: match.index,
+      end: match.index + matchedText.length,
+      text: matchedText,
+    });
+
+    if (matchedText.length === 0) {
+      regex.lastIndex += 1;
+    }
+  }
+
+  return ranges;
 }
 
 function removeEntityById(entities, entityId) {
@@ -1299,6 +2107,7 @@ function replaceSelectedCategories(
   groupedEntities,
   selectedCategories,
   excludedEntityKeys,
+  customCategories,
 ) {
   const replacementMap = new Map();
 
@@ -1308,7 +2117,7 @@ function replaceSelectedCategories(
     categoryEntities.forEach((entity, index) => {
       replacementMap.set(
         getEntityValueKey(category, entity.text),
-        `[${CATEGORY_PREFIXES[category] || "ENTITY"}_${index + 1}]`,
+        `[${getCategoryPrefix(category, customCategories)}_${index + 1}]`,
       );
     });
   });
@@ -1330,6 +2139,7 @@ function replaceSelectedCategories(
 
 function createAuditReport({
   text,
+  entities,
   anonymizedText,
   groupedEntities,
   selectedCategories,
@@ -1338,17 +2148,34 @@ function createAuditReport({
   sourceFile = null,
   nerBackend = null,
   batchMode = false,
+  customCategories = {},
 }) {
   const categories = Object.keys(groupedEntities);
   const selected = categories.filter((category) => selectedCategories[category]);
   const kept = categories.filter((category) => !selectedCategories[category]);
+  const provenance = summarizeDocumentProvenance(entities);
+
+  const machineSourceLines = Object.entries(provenance.machineBySource)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([source, count]) => `- ${formatProvenanceLabel(source)}: ${count} span${count === 1 ? "" : "s"}`);
+
+  const customCategoryLines = Object.entries(customCategories)
+    .sort(([, left], [, right]) => left.localeCompare(right))
+    .map(([categoryId, label]) => {
+      const spanCount = entities.filter((entity) => entity.label === categoryId).length;
+      return `- ${label} (${categoryId}): ${spanCount} span${spanCount === 1 ? "" : "s"} in this document`;
+    });
+
   const replacementSummary = categories
     .map((category) => {
       const uniqueCount = groupedEntities[category].length;
       const occurrenceCount = groupedEntities[category].reduce(
-        (total, entity) => total + countOccurrences(text, entity.text),
+        (total, entity) => total + countEntitySpans(entities, category, entity.text),
         0,
       );
+      const categorySpans = entities.filter((entity) => entity.label === category);
+      const manualSpanCount = categorySpans.filter(isManualEntity).length;
+      const machineSpanCount = categorySpans.length - manualSpanCount;
       const activeCount = groupedEntities[category].filter((entity) =>
         isEntityActive(entity, selectedCategories, excludedEntityKeys),
       ).length;
@@ -1358,24 +2185,57 @@ function createAuditReport({
           ? "replaced"
           : `${activeCount} of ${uniqueCount} value(s) replaced`;
 
-      return `- ${CATEGORY_LABELS[category] || category}: ${uniqueCount} unique value(s), ${occurrenceCount} occurrence(s), ${status}`;
+      return `- ${getCategoryLabel(category, customCategories)}: ${uniqueCount} unique value(s), ${occurrenceCount} span(s) (${machineSpanCount} automatic, ${manualSpanCount} manual), ${status}`;
     })
     .join("\n");
-  const valueDecisions = selected
-    .flatMap((category) =>
-      groupedEntities[category].map((entity, index) => {
-        const replacement = `[${CATEGORY_PREFIXES[category] || "ENTITY"}_${index + 1}]`;
-        const occurrences = countOccurrences(text, entity.text);
-        const active = isEntityActive(entity, selectedCategories, excludedEntityKeys);
 
-        if (active) {
-          return `- ${CATEGORY_LABELS[category] || category}: "${entity.text}" -> ${replacement} (${occurrences} occurrence${occurrences === 1 ? "" : "s"}, source: ${entity.source || "unknown"})`;
+  const automaticReplacements = [];
+  const manualReplacements = [];
+  const mixedReplacements = [];
+  const excludedValues = [];
+
+  categories.forEach((category) => {
+    groupedEntities[category].forEach((entity, index) => {
+      const replacement = selectedCategories[category]
+        ? `[${getCategoryPrefix(category, customCategories)}_${index + 1}]`
+        : null;
+      const spanProvenance = summarizeSpanProvenance(entities, category, entity.text);
+      const occurrences = spanProvenance.spans.length;
+      const active = isEntityActive(entity, selectedCategories, excludedEntityKeys);
+      const line = formatValueDecisionLine({
+        category,
+        customCategories,
+        value: entity.text,
+        replacement,
+        occurrences,
+        provenance: spanProvenance,
+        status: active && replacement ? "replaced" : "excluded",
+      });
+
+      if (!active || !replacement) {
+        if (selectedCategories[category]) {
+          excludedValues.push(line);
         }
+        return;
+      }
 
-        return `- ${CATEGORY_LABELS[category] || category}: "${entity.text}" kept unchanged (${occurrences} occurrence${occurrences === 1 ? "" : "s"}, toggled off)`;
-      }),
-    )
-    .join("\n");
+      if (spanProvenance.manualSpans.length && spanProvenance.machineSpans.length) {
+        mixedReplacements.push(line);
+      } else if (spanProvenance.manualSpans.length) {
+        manualReplacements.push(line);
+      } else {
+        automaticReplacements.push(line);
+      }
+    });
+  });
+
+  const formatSection = (lines, fallback) => lines.join("\n") || fallback;
+  const spanIndexLines = formatSpanIndexLines(
+    entities,
+    selectedCategories,
+    excludedEntityKeys,
+    customCategories,
+  );
 
   return `# Anonymization Audit Report
 
@@ -1387,24 +2247,58 @@ ${sourceFile ? `Source file: ${sourceFile}` : ""}
 ## Document Summary
 - Source characters: ${text.length}
 - Anonymized characters: ${anonymizedText.length}
-- Entity categories detected: ${categories.length}
+- Entity categories in review: ${categories.length}
 - Categories selected for replacement: ${selected.length}
 - Categories kept unchanged: ${kept.length}
+- Total annotated spans: ${provenance.manualSpans.length + provenance.machineSpans.length}
+- Character positions use 0-based indexing; each span is reported as \`start–end\` where \`start\` is inclusive and \`end\` is exclusive (same convention as JavaScript string slices).
+
+## Provenance Summary
+This report distinguishes automatic NER detections from spans added or revised during human review.
+
+- Automatic detection spans: ${provenance.machineSpans.length}
+- Human manual review spans: ${provenance.manualSpans.length}
+- Unique values with automatic spans only: ${provenance.machineOnlyValues}
+- Unique values with manual spans only: ${provenance.manualOnlyValues}
+- Unique values with mixed automatic + manual spans: ${provenance.mixedValues}
+
+### Automatic Detection Breakdown
+${formatSection(machineSourceLines, "- No automatic spans in the final review")}
+
+### Human Review Notes
+- Manual spans are tagged \`source: manual\` in the annotation data.
+- Values toggled off during review remain listed under "Values excluded from anonymization".
+${customCategoryLines.length ? `- Custom categories defined during review:\n${customCategoryLines.join("\n")}` : "- Custom categories defined during review: none"}
 
 ## Category Decisions
 ${replacementSummary || "- No entities detected"}
 
-## Exact Values Replaced
-${valueDecisions || "- No values selected for replacement"}
+## Automatic Detections — Values Replaced
+${formatSection(automaticReplacements, "- None")}
+
+## Human Manual Additions — Values Replaced
+${formatSection(manualReplacements, "- None")}
+
+## Mixed Origin — Values Replaced
+Values below contain both automatic detections and manual review spans for the same category/value.
+${formatSection(mixedReplacements, "- None")}
+
+## Values Excluded from Anonymization
+These values were detected or added during review but toggled off for replacement.
+${formatSection(excludedValues, "- None")}
+
+## Complete Span Index
+All annotated spans in source order with exact character positions.
+${formatSection(spanIndexLines, "- None")}
 
 ## Replacement Method
-Selected entity categories were replaced with stable category placeholders, for example [PERSON_1], [LOCATION_1], [DATE_1], and [EMAIL_1]. Replacements are applied consistently for each unique detected value within the current text.
+Selected entity categories were replaced with stable category placeholders, for example [PERSON_1], [LOCATION_1], [DATE_1], and [EMAIL_1]. Replacements are applied consistently for each unique value within the current text. Each line above records span counts, character offsets, and whether spans came from automatic detection or human manual review.
 
 ## Categories Replaced
-${selected.map((category) => `- ${CATEGORY_LABELS[category] || category}`).join("\n") || "- None"}
+${selected.map((category) => `- ${getCategoryLabel(category, customCategories)}`).join("\n") || "- None"}
 
 ## Categories Kept Unchanged
-${kept.map((category) => `- ${CATEGORY_LABELS[category] || category}`).join("\n") || "- None"}
+${kept.map((category) => `- ${getCategoryLabel(category, customCategories)}`).join("\n") || "- None"}
 
 ## Privacy Note
 This report includes raw detected values selected for replacement so the anonymization process can be audited. Treat the report as sensitive research data and store or share it with the same care as the source document.
@@ -1414,21 +2308,16 @@ This tool is an anonymization assistant. Researchers should manually review the 
 `;
 }
 
+function countEntitySpans(entities, category, value) {
+  const normalized = value.toLocaleLowerCase();
+  return entities.filter(
+    (entity) =>
+      entity.label === category && entity.text.toLocaleLowerCase() === normalized,
+  ).length;
+}
+
 function countOccurrences(text, value) {
-  if (!value) return 0;
-
-  let count = 0;
-  let cursor = 0;
-
-  while (cursor < text.length) {
-    const index = text.indexOf(value, cursor);
-    if (index === -1) break;
-
-    count += 1;
-    cursor = index + value.length;
-  }
-
-  return count;
+  return findAllOccurrenceRanges(text, value).length;
 }
 
 function downloadFile(content, fileName, type) {

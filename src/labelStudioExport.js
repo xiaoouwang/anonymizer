@@ -26,11 +26,19 @@ export const LABEL_STUDIO_NER_CONFIG = `<View>
   <Text name="${LABEL_STUDIO_TO_NAME}" value="$text"/>
 </View>`;
 
-export function toLabelStudioLabel(category) {
-  return APP_TO_LABEL_STUDIO[category] || "Misc";
+export function toLabelStudioLabel(category, customCategories = {}) {
+  return APP_TO_LABEL_STUDIO[category] || customCategories[category] || formatCategoryDisplayName(category);
 }
 
-export function entityToLabelStudioResult(entity, index) {
+function formatCategoryDisplayName(categoryId) {
+  return categoryId
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+export function entityToLabelStudioResult(entity, index, customCategories = {}) {
   const spanText = entity.text ?? "";
 
   return {
@@ -42,12 +50,19 @@ export function entityToLabelStudioResult(entity, index) {
       start: entity.start,
       end: entity.end,
       text: spanText,
-      labels: [toLabelStudioLabel(entity.label)],
+      labels: [toLabelStudioLabel(entity.label, customCategories)],
     },
   };
 }
 
-export function createLabelStudioTask({ text, entities, modelName, nerBackend, sourceFile = null }) {
+export function createLabelStudioTask({
+  text,
+  entities,
+  modelName,
+  nerBackend,
+  sourceFile = null,
+  customCategories = {},
+}) {
   const orderedEntities = [...entities].sort((a, b) => a.start - b.start || a.end - b.end);
 
   return {
@@ -61,7 +76,9 @@ export function createLabelStudioTask({ text, entities, modelName, nerBackend, s
     predictions: [
       {
         model_version: modelName || nerBackend || "incognito",
-        result: orderedEntities.map((entity, index) => entityToLabelStudioResult(entity, index)),
+        result: orderedEntities.map((entity, index) =>
+          entityToLabelStudioResult(entity, index, customCategories),
+        ),
       },
     ],
   };
