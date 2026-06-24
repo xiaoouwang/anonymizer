@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="logos/logo_app.png" alt="Incognito" width="128" />
-</p>
+
 
 # ✨ Incognito
 
@@ -16,13 +14,15 @@ Développé par [Xiaoou Wang](https://xiaoouwang.github.io/) · Ingénieur en Hu
 
 ## 🔒 Pourquoi cet outil ?
 
-|                              |                                                                        |
-| ---------------------------- | ---------------------------------------------------------------------- |
-| 🏠 **100 % local**            | Aucun appel à une API externe. Vos textes restent sur votre machine.   |
-| 🌍 **Multiplateforme**        | Même workflow sur macOS, Windows et Linux — installateurs autonomes.   |
+
+|                                 |                                                                        |
+| ------------------------------- | ---------------------------------------------------------------------- |
+| 🏠 **100 % local**              | Aucun appel à une API externe. Vos textes restent sur votre machine.   |
+| 🌍 **Multiplateforme**          | Même workflow sur macOS, Windows et Linux — installateurs autonomes.   |
 | 🇫🇷 **Pensé pour le français** | Modèles spaCy et CamemBERT adaptés aux textes qualitatifs en français. |
-| 👁️ **Contrôle humain**        | Vous validez, corrigez et désactivez entité par entité avant l'export. |
-| 📋 **Traçabilité**            | Rapport d'audit et exports prêts pour l'archivage ou Label Studio.     |
+| 👁️ **Contrôle humain**         | Vous validez, corrigez et désactivez entité par entité avant l'export. |
+| 📋 **Traçabilité**              | Rapport d'audit et exports prêts pour l'archivage ou Label Studio.     |
+
 
 > ⚠️ Assistant d'anonymisation, pas une garantie d'anonymat total. Relisez toujours le résultat avant diffusion.
 
@@ -54,12 +54,14 @@ Placeholders stables du type `[PERSON_1]`, `[LOCATION_2]`, `[EMAIL_1]`.
 
 Interface **Electron** + **React** (Vite), moteur NER **Python** embarqué (PyInstaller), modèles **spaCy** et **CamemBERT** / Transformers. Chaîne de build **electron-builder** → installateurs `.dmg`, `.exe`, `.AppImage` / `.deb`, avec CI **GitHub Actions** pour les trois systèmes.
 
-| Couche    | Outils                                          |
-| --------- | ----------------------------------------------- |
-| 🖥️ Bureau  | Electron, React                                 |
+
+| Couche     | Outils                                          |
+| ---------- | ----------------------------------------------- |
+| 🖥️ Bureau | Electron, React                                 |
 | 🧠 NER     | Python 3.12, spaCy, CamemBERT (Hugging Face)    |
 | 📦 Release | PyInstaller, electron-builder                   |
 | 🔄 CI      | GitHub Actions (`macos` / `windows` / `ubuntu`) |
+
 
 Même code, mêmes exports — quel que soit l'OS de l'équipe.
 
@@ -69,12 +71,14 @@ Même code, mêmes exports — quel que soit l'OS de l'équipe.
 
 🌍 **Cross-platform** — binaires autonomes pour **macOS**, **Windows** et **Linux** → [GitHub Releases](https://github.com/xiaoouwang/anonymizer/releases)
 
-| Plateforme              | Fichier typique             |
-| ----------------------- | --------------------------- |
+
+| Plateforme               | Fichier typique             |
+| ------------------------ | --------------------------- |
 | 🍎 macOS (Apple Silicon) | `Incognito-0.2.0-arm64.dmg` |
 | 🍎 macOS (Intel)         | `Incognito-0.2.0.dmg`       |
 | 🪟 Windows               | `Incognito Setup 0.2.0.exe` |
 | 🐧 Linux                 | `Incognito-0.2.0.AppImage`  |
+
 
 Premier lancement CamemBERT : connexion internet une fois (~400 Mo, téléchargement du modèle Hugging Face).
 
@@ -112,29 +116,26 @@ CI multi-plateforme : workflow **Release binaries** dans `.github/workflows/rele
 
 ### Branches Git (développement par plateforme)
 
-À partir de la version **0.2.0**, le dépôt utilise une branche par système d'exploitation. Toutes partent du **même point de départ** sur `main` :
+À partir de la version **0.2.0**, la branche main est utilisée pour le développement sous MacOS.
 
-| Branche   | Usage                                                                         |
-| --------- | ----------------------------------------------------------------------------- |
-| `main`    | Ligne de base partagée — fonctionnalités communes et point de synchronisation |
-| `mac`     | Modifications et builds spécifiques **macOS**                                 |
-| `windows` | Modifications et builds spécifiques **Windows**                               |
-| `linux`   | Modifications et builds spécifiques **Linux**                                 |
+
+| Branche   | Usage                                           |
+| --------- | ----------------------------------------------- |
+| `main`    | Modifications et builds spécifiques **macOS**   |
+| `windows` | Modifications et builds spécifiques **Windows** |
+| `linux`   | Modifications et builds spécifiques **Linux**   |
+
 
 **Workflow recommandé**
 
 ```bash
 # Basculer vers la branche de votre plateforme avant de travailler
-git checkout mac        # sur macOS
+git checkout main        # sur macOS
 git checkout windows    # sur Windows
 git checkout linux      # sur Linux
-
-# Après des changements communs sur main, réaligner une branche plateforme :
-git checkout mac
-git merge main
 ```
 
-Toute modification doit être faite sur la branche correspondant à la plateforme ciblée. Les évolutions transverses peuvent d'abord être intégrées sur `main`, puis fusionnées dans `mac`, `windows` et `linux`.
+Toute modification doit être faite sur la branche correspondant à la plateforme ciblée.
 
 ---
 
@@ -142,7 +143,7 @@ Toute modification doit être faite sur la branche correspondant à la plateform
 
 Si vous utilisez **Incognito** dans un article, un rapport, un protocole ou un jeu de données, merci de citer :
 
-> Wang, X. (2026). *Incognito* (Version 0.2.0) [Logiciel]. Maison des Sciences de l'Homme Sud-Est / Université Côte d'Azur. https://github.com/xiaoouwang/anonymizer
+> Wang, X. (2026). *Incognito* (Version 0.2.0) [Logiciel]. Maison des Sciences de l'Homme Sud-Est / Université Côte d'Azur. [https://github.com/xiaoouwang/anonymizer](https://github.com/xiaoouwang/anonymizer)
 
 **Clé LaTeX** — `wang2026incognito`
 
@@ -166,9 +167,9 @@ Si vous utilisez **Incognito** dans un article, un rapport, un protocole ou un j
 
 **APA (7e éd.)**
 
-> Wang, X. (2026). *Incognito* (Version 0.2.0) [Computer software]. Maison des Sciences de l'Homme Sud-Est, Université Côte d'Azur. https://github.com/xiaoouwang/anonymizer
+> Wang, X. (2026). *Incognito* (Version 0.2.0) [Computer software]. Maison des Sciences de l'Homme Sud-Est, Université Côte d'Azur. [https://github.com/xiaoouwang/anonymizer](https://github.com/xiaoouwang/anonymizer)
 
-Un fichier [`CITATION.cff`](CITATION.cff) est aussi disponible pour l'onglet **Cite this repository** sur GitHub.
+Un fichier `[CITATION.cff](CITATION.cff)` est aussi disponible pour l'onglet **Cite this repository** sur GitHub.
 
 ---
 
@@ -185,6 +186,7 @@ Les rapports d'audit peuvent contenir des valeurs sensibles : manipulez-les comm
 Historique des évolutions fonctionnelles, avec date et fonctions concernées dans le code.
 
 ### 2026-06-24 — Mode lot, navigation et sorties
+
 
 | Fonction / handler                            | Fichier             | Rôle                                                                                               |
 | --------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------- |
@@ -204,9 +206,11 @@ Historique des évolutions fonctionnelles, avec date et fonctions concernées da
 | `removeBatchOutputVariant`                    | `electron/main.cjs` | Supprime l'autre variante (standard / `_modified`) lors d'un changement de statut.                 |
 | `batch:loadTextFolder` / `batch:writeOutputs` | `electron/main.cjs` | IPC Electron pour charger un dossier et écrire les sorties lot.                                    |
 
+
 **Comportement :** sorties dans `outputs-YYYYMMDD-HHMMSS/` ; noms standard à l'issue du traitement automatique ; suffixe `_modified` dès que l'utilisateur **quitte** un fichier (Précédent / Suivant, saut par numéro ou nom, fermeture du dossier).
 
 ### 2026-06-24 — Rapport d'audit et traçabilité
+
 
 | Fonction                      | Fichier       | Rôle                                                                |
 | ----------------------------- | ------------- | ------------------------------------------------------------------- |
@@ -221,9 +225,11 @@ Historique des évolutions fonctionnelles, avec date et fonctions concernées da
 | `formatSpanPositionLines`     | `src/App.jsx` | Liste indentée des positions par span.                              |
 | `formatSpanIndexLines`        | `src/App.jsx` | Section *Complete Span Index* (tous les spans ordonnés).            |
 
+
 **Convention des positions :** indexation **0-based**, `start` inclusif et `end` exclusif (comme `String.slice` en JavaScript).
 
 ### 2026-06-24 — Revue manuelle et catégories personnalisées
+
 
 | Fonction                                         | Fichier                    | Rôle                                                                                       |
 | ------------------------------------------------ | -------------------------- | ------------------------------------------------------------------------------------------ |
@@ -236,6 +242,7 @@ Historique des évolutions fonctionnelles, avec date et fonctions concernées da
 | `EntityEditMenu`                                 | `src/App.jsx`              | Menu d'ajout/suppression ; portée *toutes les occurrences* ou *cette sélection seulement*. |
 | `createLabelStudioExport` / `toLabelStudioLabel` | `src/labelStudioExport.js` | Export Label Studio incluant les catégories personnalisées.                                |
 
+
 ### 2026-06-24 — Identité *Incognito* (v0.2.0)
 
 - Renommage de l'application, logo, favicon, barre de titre Electron centrée, icônes de build (`build/icon.png`).
@@ -244,5 +251,6 @@ Historique des évolutions fonctionnelles, avec date et fonctions concernées da
 ### 2026-06-23 — Publication et plateformes
 
 - Workflows GitHub Actions multi-OS (`macos` / `windows` / `ubuntu`).
-- Fichier de citation [`CITATION.cff`](CITATION.cff) et section *Citer cet outil*.
-- Préparation de l'article [`arxiv/main.tex`](arxiv/main.tex).
+- Fichier de citation `[CITATION.cff](CITATION.cff)` et section *Citer cet outil*.
+- Préparation de l'article `[arxiv/main.tex](arxiv/main.tex)`.
+
