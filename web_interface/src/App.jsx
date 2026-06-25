@@ -7,7 +7,6 @@ import EntityEditMenu from "./components/EntityEditMenu.jsx";
 import HighlightedText from "./components/HighlightedText.jsx";
 import ModelProgress from "./components/ModelProgress.jsx";
 import BatchJobProgress from "./components/BatchJobProgress.jsx";
-import InstallAppBanner from "./components/InstallAppBanner.jsx";
 import LanguageToggle from "./components/LanguageToggle.jsx";
 import SampleDemoBanner from "./components/SampleDemoBanner.jsx";
 import { useUiLocale } from "./context/UiLocaleContext.jsx";
@@ -867,8 +866,6 @@ export default function App() {
           </div>
         </aside>
       </header>
-
-      <InstallAppBanner />
 
       {isDemoMode && !batchMode ? <SampleDemoBanner /> : null}
 

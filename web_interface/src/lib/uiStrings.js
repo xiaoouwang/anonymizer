@@ -23,11 +23,11 @@ const en = {
   demoPanelHint:
     "explore review tools; run detection on your own text when ready",
   statusDemoInitial:
-    "Sample interview pre-loaded — explore the review panel below. Run Anonymization on your own text when ready (first run downloads the model).",
+    "Sample interview pre-loaded — explore the review panel below. Run Anonymization on your own text when ready (the first run downloads the model).",
   statusDemoRestored:
     "Sample demo restored — explore category toggles, exclusions, and manual edits.",
   sampleDemoBanner:
-    "This interview is already annotated so you can explore category toggles, exclusions, manual edits, and exports — no model download needed yet. Paste your own text or click Run Anonymization when you are ready (first run downloads the detection model).",
+    "This interview is already annotated so you can explore category toggles, exclusions, manual edits, and exports — no model download needed yet. Paste your own text or click Run Anonymization when you are ready (the first run downloads the detection model).",
   sampleDemoBannerTitle: "Sample demo loaded.",
   loadSampleDemo: "Load sample demo",
   nerModel: "NER model",
@@ -81,13 +81,6 @@ const en = {
   categoryHint: "Click an entity to toggle all of its occurrences in the output.",
   chipKeep: "Click to keep this value unchanged in the output",
   chipInclude: "Click to include this value in anonymization again",
-  installTitle: "Install Incognito",
-  installBody:
-    "Add a desktop shortcut that opens this app in its own window — no binary download, same privacy-first text anonymization.",
-  installButton: "Install app",
-  installHintTitle: "Install as an app",
-  installHintBody:
-    "In Chrome or Edge: menu → Install Incognito / Apps → Install this site. On macOS you can keep it in the Dock like a native app.",
   auditEyebrow: "Research documentation",
   auditTitle: "Audit Report",
   auditCopy: "Copy report",
@@ -132,7 +125,6 @@ const en = {
         bullets: [
           "The first time you run anonymization on your own text, the app may download a language-detection tool (a one-off file, roughly the size of a large document). Your transcripts are not part of that download.",
           "Once that file is saved in your browser, you can usually continue working even without a connection.",
-          "If you install Incognito as an app on your desktop or Dock, the same rule applies — it is still your computer doing the work.",
         ],
       },
       {
@@ -142,12 +134,6 @@ const en = {
           "The names, places, and organisations you mark for replacement",
           "Your manual corrections or the audit trail you generate",
           "The names of files or folders you open in batch mode",
-        ],
-      },
-      {
-        heading: "About the public website",
-        paragraphs: [
-          "The online version at xiaoouwang.github.io/Incognito may count anonymous visits (how many people opened the page). That statistic does not include your texts or your anonymization choices.",
         ],
       },
       {
@@ -256,13 +242,6 @@ const fr = {
     "Cliquez sur une entité pour basculer toutes ses occurrences dans le résultat.",
   chipKeep: "Cliquez pour conserver cette valeur dans le texte final",
   chipInclude: "Cliquez pour inclure à nouveau cette valeur dans l'anonymisation",
-  installTitle: "Installer Incognito",
-  installBody:
-    "Ajoutez un raccourci bureau qui ouvre l'application dans sa propre fenêtre — sans binaire à télécharger, même anonymisation respectueuse de la vie privée.",
-  installButton: "Installer l'application",
-  installHintTitle: "Installer comme application",
-  installHintBody:
-    "Dans Chrome ou Edge : menu → Installer Incognito / Applications → Installer ce site. Sur macOS, vous pouvez l'épingler au Dock comme une application native.",
   auditEyebrow: "Documentation de recherche",
   auditTitle: "Rapport d'audit",
   auditCopy: "Copier le rapport",
@@ -308,7 +287,6 @@ const fr = {
         bullets: [
           "La première fois que vous lancez l'anonymisation sur votre propre texte, l'application peut télécharger un outil de détection linguistique (fichier unique, de taille comparable à un long document). Vos transcriptions ne font pas partie de ce téléchargement.",
           "Une fois ce fichier enregistré dans votre navigateur, vous pouvez en général continuer à travailler sans connexion.",
-          "Si vous installez Incognito comme application sur le bureau ou le Dock, la règle est la même — c'est toujours votre ordinateur qui fait le travail.",
         ],
       },
       {
@@ -318,12 +296,6 @@ const fr = {
           "Les noms, lieux et organisations que vous marquez pour remplacement",
           "Vos corrections manuelles ou la trace d'audit que vous générez",
           "Les noms de fichiers ou de dossiers ouverts en mode lot",
-        ],
-      },
-      {
-        heading: "À propos du site public",
-        paragraphs: [
-          "La version en ligne sur xiaoouwang.github.io/Incognito peut compter les visites anonymes (combien de personnes ouvrent la page). Cette statistique n'inclut ni vos textes ni vos choix d'anonymisation.",
         ],
       },
       {

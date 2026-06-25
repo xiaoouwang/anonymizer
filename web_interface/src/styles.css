@@ -252,50 +252,6 @@ code {
   text-decoration-color: rgba(196, 92, 38, 0.45);
 }
 
-.install-banner {
-  align-items: center;
-  background: linear-gradient(135deg, rgba(32, 58, 95, 0.08), rgba(196, 92, 38, 0.08));
-  border: 1px solid rgba(32, 58, 95, 0.12);
-  border-radius: 0.85rem;
-  display: flex;
-  gap: 1rem;
-  justify-content: space-between;
-  margin: 0 0 1rem;
-  padding: 0.9rem 1rem;
-}
-
-.install-banner p {
-  color: #4b5563;
-  font-size: 0.88rem;
-  line-height: 1.45;
-  margin: 0.25rem 0 0;
-}
-
-.install-banner strong {
-  color: #203a5f;
-  font-size: 0.95rem;
-}
-
-.install-banner-button {
-  background: #203a5f;
-  border: none;
-  border-radius: 0.55rem;
-  color: #fff;
-  cursor: pointer;
-  flex-shrink: 0;
-  font-size: 0.88rem;
-  font-weight: 700;
-  padding: 0.55rem 0.9rem;
-}
-
-.install-banner-button:hover {
-  background: #c45c26;
-}
-
-.install-banner-hint {
-  background: rgba(32, 58, 95, 0.04);
-}
-
 .demo-banner {
   align-items: flex-start;
   background: linear-gradient(135deg, rgba(196, 92, 38, 0.1), rgba(32, 58, 95, 0.06));
@@ -1240,11 +1196,6 @@ textarea {
   .workspace,
   .preview-grid {
     grid-template-columns: 1fr;
-  }
-
-  .install-banner {
-    align-items: flex-start;
-    flex-direction: column;
   }
 
   .batch-navigation {
