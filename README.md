@@ -8,7 +8,9 @@ Application de bureau **multiplateforme** (macOS, Windows, Linux) pour les scien
 
 Développé par [Xiaoou Wang](https://xiaoouwang.github.io/) · Ingénieur en Humanités Numériques · [MSHS Sud-Est](https://mshs.univ-cotedazur.fr/) · [Université Côte d'Azur](https://univ-cotedazur.fr/)
 
-**Version actuelle : 0.2.0** — identité visuelle (logo, barre de titre intégrée), renommage *Incognito*, rapport d'audit enrichi, mode lot restructuré.
+**Version actuelle : 0.2.0**
+
+![Demo](demo.gif)
 
 ---
 
