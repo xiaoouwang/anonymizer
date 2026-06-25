@@ -1,8 +1,8 @@
+import { useUiLocale } from "../context/UiLocaleContext.jsx";
 import {
   countEntitySpans,
   getCategoryChipClass,
   getEntityValueKey,
-  isEntityActive,
 } from "../lib/entityUtils.js";
 
 export default function CategoryReview({
@@ -14,14 +14,11 @@ export default function CategoryReview({
   onToggleCategory,
   onToggleEntity,
 }) {
+  const { t } = useUiLocale();
   const categories = Object.keys(groupedEntities);
 
   if (!categories.length) {
-    return (
-      <div className="empty-state">
-        Run anonymization or add entities manually in the highlighted view below.
-      </div>
-    );
+    return <div className="empty-state">{t("categoryEmpty")}</div>;
   }
 
   return (
@@ -35,8 +32,8 @@ export default function CategoryReview({
               onChange={() => onToggleCategory(category)}
             />
             <span>
-              Replace {categoryLabels[category] || category}
-              <small>{groupedEntities[category].length} unique value(s)</small>
+              {t("replaceCategory")} {categoryLabels[category] || category}
+              <small>{t("uniqueValues", { count: groupedEntities[category].length })}</small>
             </span>
           </label>
           <div className="entity-chips">
@@ -52,11 +49,7 @@ export default function CategoryReview({
                   className={`chip ${getCategoryChipClass(category)} ${active ? "chip-active" : "chip-inactive"}`}
                   key={entity.key}
                   onClick={() => onToggleEntity(category, entity.text)}
-                  title={
-                    active
-                      ? "Click to keep this value unchanged in the output"
-                      : "Click to include this value in anonymization again"
-                  }
+                  title={active ? t("chipKeep") : t("chipInclude")}
                 >
                   <span className="chip-label">{entity.text}</span>
                   <span className="chip-count">{occurrenceCount}</span>
@@ -66,7 +59,7 @@ export default function CategoryReview({
           </div>
         </article>
       ))}
-      <p className="category-hint">Click an entity to toggle all of its occurrences in the output.</p>
+      <p className="category-hint">{t("categoryHint")}</p>
     </div>
   );
 }

@@ -1,9 +1,13 @@
-const PHASE_LABELS = {
-  loading: "Loading documents",
-  detecting: "Detecting entities in batch",
+import { useUiLocale } from "../context/UiLocaleContext.jsx";
+
+const PHASE_KEYS = {
+  loading: "batchLoading",
+  detecting: "batchDetecting",
 };
 
 export default function BatchJobProgress({ progress }) {
+  const { t } = useUiLocale();
+
   if (!progress) {
     return null;
   }
@@ -15,7 +19,7 @@ export default function BatchJobProgress({ progress }) {
   const isWorking = total > 0 && completed < total;
   const activeFileNumber = Math.min(completed + 1, total);
   const showIndeterminate = isIndeterminate || (isWorking && percent === 0);
-  const title = PHASE_LABELS[progress.phase] || "Processing batch";
+  const title = t(PHASE_KEYS[progress.phase] || "batchProcessingGeneric");
 
   return (
     <section className="panel model-progress-panel batch-job-progress-panel" aria-live="polite" aria-busy="true">
@@ -25,10 +29,10 @@ export default function BatchJobProgress({ progress }) {
             <h2>{title}</h2>
             <p className="model-progress-summary-note">
               {progress.fileName && isWorking
-                ? `Processing: ${progress.fileName}`
+                ? t("batchProcessingFile", { name: progress.fileName })
                 : progress.fileName
-                  ? `Finished: ${progress.fileName}`
-                  : "Preparing your selected documents…"}
+                  ? t("batchFinishedFile", { name: progress.fileName })
+                  : t("batchPreparing")}
             </p>
           </div>
           <div className="model-progress-overall-value" aria-hidden="true">
@@ -59,8 +63,8 @@ export default function BatchJobProgress({ progress }) {
         {total > 0 ? (
           <p className="batch-job-progress-count">
             {isWorking
-              ? `Processing file ${activeFileNumber} of ${total}`
-              : `Completed ${total} of ${total}`}
+              ? t("batchFileProgress", { current: activeFileNumber, total })
+              : t("batchFileComplete", { total })}
           </p>
         ) : null}
       </div>

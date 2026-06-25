@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import AuditReportWindow from "./components/AuditReportWindow.jsx";
+import PrivacyDetailsWindow from "./components/PrivacyDetailsWindow.jsx";
+import { PrivacyPromise, PrivacyDetailsLink } from "./components/PrivacyPromise.jsx";
 import CategoryReview from "./components/CategoryReview.jsx";
 import EntityEditMenu from "./components/EntityEditMenu.jsx";
 import HighlightedText from "./components/HighlightedText.jsx";
 import ModelProgress from "./components/ModelProgress.jsx";
 import BatchJobProgress from "./components/BatchJobProgress.jsx";
 import InstallAppBanner from "./components/InstallAppBanner.jsx";
+import LanguageToggle from "./components/LanguageToggle.jsx";
 import SampleDemoBanner from "./components/SampleDemoBanner.jsx";
+import { useUiLocale } from "./context/UiLocaleContext.jsx";
 import { useNerWorker } from "./hooks/useNerWorker.js";
 import { createLabelStudioExport } from "./labelStudioExport.js";
 import { createAuditReport } from "./lib/auditReport.js";
@@ -19,7 +23,8 @@ import {
   readDocumentsFromFolderInput,
 } from "./lib/batchLoad.js";
 import { NER_BACKENDS } from "./lib/constants.js";
-import { buildSampleDemoState, DEMO_MODEL_LABEL } from "./lib/sampleDemo.js";
+import { buildSampleDemoState } from "./lib/sampleDemo.js";
+import { translate } from "./lib/uiStrings.js";
 import { backendDisplayLabel, CUSTOM_MODEL_EXAMPLE } from "./lib/modelRegistry.js";
 import {
   addEntitySpans,
@@ -44,6 +49,7 @@ import {
 
 export default function App() {
   const { detectEntities: detectEntitiesInWorker, progressItems, modelReady } = useNerWorker();
+  const { t, locale } = useUiLocale();
   const folderInputRef = useRef(null);
   const filesInputRef = useRef(null);
   const fileStatesRef = useRef({});
@@ -60,6 +66,7 @@ export default function App() {
   const [selectedCategories, setSelectedCategories] = useState(initialDemo.selectedCategories);
   const [excludedEntityKeys, setExcludedEntityKeys] = useState({});
   const [reportOpen, setReportOpen] = useState(false);
+  const [privacyDetailsOpen, setPrivacyDetailsOpen] = useState(false);
   const [isDetecting, setIsDetecting] = useState(false);
   const [isBatchLoading, setIsBatchLoading] = useState(false);
   const [batchJobProgress, setBatchJobProgress] = useState(null);
@@ -73,9 +80,7 @@ export default function App() {
   const [batchFiles, setBatchFiles] = useState([]);
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
   const [autoRunNer, setAutoRunNer] = useState(true);
-  const [status, setStatus] = useState(
-    "Sample interview pre-loaded — explore the review panel below. Run Anonymization on your own text when ready (first run downloads the model).",
-  );
+  const [status, setStatus] = useState(() => translate("en", "statusDemoInitial"));
   const [error, setError] = useState("");
   const [entityMenu, setEntityMenu] = useState(null);
   const [customCategories, setCustomCategories] = useState({});
@@ -102,6 +107,12 @@ export default function App() {
       ...(savedState?.customCategories ?? {}),
     });
   }
+
+  useEffect(() => {
+    if (isDemoMode && !batchMode) {
+      setStatus(t("statusDemoInitial"));
+    }
+  }, [locale, isDemoMode, batchMode, t]);
 
   useEffect(() => {
     entityMenuRef.current = entityMenu;
@@ -609,9 +620,7 @@ export default function App() {
     setReportOpen(false);
     setError("");
     setIsDemoMode(true);
-    setStatus(
-      "Sample demo restored — explore category toggles, exclusions, and manual edits.",
-    );
+    setStatus(t("statusDemoRestored"));
   }
 
   async function exitBatchMode() {
@@ -632,7 +641,7 @@ export default function App() {
     setCurrentFileIndex(0);
     setCurrentFileOutputsModified(false);
     restoreSampleDemo();
-    setStatus("Batch mode closed. Restored the sample demo.");
+    setStatus(t("batchModeClosed"));
   }
 
   async function clearSession() {
@@ -648,7 +657,7 @@ export default function App() {
     setModelName(null);
     setIsDemoMode(false);
     setReportOpen(false);
-    setStatus("Session cleared.");
+    setStatus(t("sessionCleared"));
     setError("");
   }
 
@@ -794,25 +803,28 @@ export default function App() {
           <div className="hero-brand">
             <img className="hero-logo" src="./logo.png" alt="" width={72} height={72} />
             <div className="hero-brand-text">
-              <h1>Incognito</h1>
-              <p className="hero-tagline">Privacy-first text anonymization in your browser</p>
-              <p className="privacy-promise">
-                Everything runs locally — your data never leaves your computer.
-              </p>
+              <div className="hero-title-row">
+                <h1>Incognito</h1>
+                <LanguageToggle />
+              </div>
+              <p className="hero-tagline">{t("heroTagline")}</p>
+              <PrivacyPromise onOpenDetails={() => setPrivacyDetailsOpen(true)} />
             </div>
           </div>
 
           <p>
-            🕵️‍♂️ Detect named entities in your text<br />
-            👀 Review the identified occurrences<br />
-            📄 Generate an anonymized audit report
+            🕵️‍♂️ {t("heroStep1")}
+            <br />
+            👀 {t("heroStep2")}
+            <br />
+            📄 {t("heroStep3")}
           </p>
           <p className="credits">
-            👨‍💻 Developed by{" "}
+            👨‍💻 {t("creditsDeveloped")}{" "}
             <a href="https://xiaoouwang.github.io/" target="_blank" rel="noreferrer">
               Xiaoou Wang
             </a>
-            {" · "}Digital Humanities Engineer{" · "}
+            {" · "}{t("creditsRole")}{" · "}
             <a href="https://mshs.univ-cotedazur.fr/" target="_blank" rel="noreferrer">
               MSHS Sud-Est
             </a>
@@ -822,13 +834,13 @@ export default function App() {
             </a>
           </p>
           <p className="credits">
-            🖥️ Need spaCy, offline installers? See the{" "}
+            🖥️ {t("creditsDesktop")}{" "}
             <a
               href="https://github.com/xiaoouwang/Incognito"
               target="_blank"
               rel="noreferrer"
             >
-              Incognito desktop app
+              {t("creditsDesktopApp")}
             </a>
             {" · "}
             <a
@@ -836,7 +848,7 @@ export default function App() {
               target="_blank"
               rel="noreferrer"
             >
-              download releases
+              {t("creditsReleases")}
             </a>
           </p>
         </div>
@@ -847,13 +859,10 @@ export default function App() {
             </span>
             <div>
               <strong style={{ fontSize: "1.1em" }}>
-                Everything runs locally — your data never leaves your computer.
+                {t("privacyPromise")}{" "}
+                <PrivacyDetailsLink onOpen={() => setPrivacyDetailsOpen(true)} />
               </strong>
-              <div style={{ fontSize: "0.95em", marginTop: 6 }}>
-                Your text is analyzed inside the browser, not on a remote server. The only
-                internet connection is a one-time download of the detection model — your
-                documents are never uploaded.
-              </div>
+              <div style={{ fontSize: "0.95em", marginTop: 6 }}>{t("privacyAsideBody")}</div>
             </div>
           </div>
         </aside>
@@ -869,7 +878,7 @@ export default function App() {
 
       <section className="controls">
         <label className="backend-select">
-          NER model
+          {t("nerModel")}
           <select
             value={nerBackend}
             onChange={(event) => {
@@ -897,7 +906,7 @@ export default function App() {
         </label>
         {nerBackend === "custom" ? (
           <label className="backend-select custom-model-field">
-            Model id
+            {t("modelId")}
             <input
               type="text"
               value={customModelId}
@@ -917,25 +926,25 @@ export default function App() {
           </label>
         ) : null}
         <button onClick={detectEntities} disabled={!text.trim() || isDetecting}>
-          {isDetecting ? "Anonymizing..." : "Run Anonymization"}
+          {isDetecting ? t("anonymizing") : t("runAnonymization")}
         </button>
         {!batchMode && !isDemoMode ? (
           <button type="button" className="secondary" onClick={restoreSampleDemo}>
-            Load sample demo
+            {t("loadSampleDemo")}
           </button>
         ) : null}
         <button onClick={copyAnonymizedText} disabled={!entities.length}>
-          Copy anonymized text
+          {t("copyAnonymized")}
         </button>
         <button onClick={() => setReportOpen(true)} disabled={!entities.length}>
-          Show audit report
+          {t("showAuditReport")}
         </button>
         <button
           className="secondary"
           onClick={downloadLabelStudioExport}
           disabled={!entities.length || isBatchLoading}
         >
-          Export to Label Studio
+          {t("exportLabelStudio")}
         </button>
         {batchMode ? (
           <button
@@ -943,7 +952,7 @@ export default function App() {
             onClick={downloadAllBatchOutputs}
             disabled={isDownloadingZip || isDetecting}
           >
-            {isDownloadingZip ? "Building ZIP..." : "Export anonymized data"}
+            {isDownloadingZip ? t("buildingZip") : t("exportAnonymizedData")}
           </button>
         ) : null}
         {batchMode ? (
@@ -953,44 +962,39 @@ export default function App() {
               onClick={() => goToFile(currentFileIndex - 1)}
               disabled={currentFileIndex === 0 || isBatchLoading || isDetecting}
             >
-              Previous file
+              {t("previousFile")}
             </button>
             <button
               className="secondary"
               onClick={() => goToFile(currentFileIndex + 1)}
               disabled={currentFileIndex >= batchFiles.length - 1 || isBatchLoading || isDetecting}
             >
-              Next file
+              {t("nextFile")}
             </button>
           </>
         ) : null}
         <button className="secondary" onClick={clearSession} disabled={isBatchLoading}>
-          {batchMode ? "Close batch" : "Clear"}
+          {batchMode ? t("closeBatch") : t("clear")}
         </button>
         <span className="status">{status}</span>
       </section>
 
       <section className="batch-panel panel">
         <div className="batch-panel-intro">
-          <h2>Batch processing</h2>
-          <p className="batch-description">
-            Anonymize several qualitative documents in one session. Load a whole folder or pick
-            specific <code>.txt</code> / <code>.docx</code> files, run named-entity detection,
-            review and correct each text interactively, then download a ZIP with anonymized versions,
-            audit reports, and Label Studio exports.
-          </p>
+          <h2>{t("batchProcessing")}</h2>
+          <p className="batch-description">{t("batchDescription")}</p>
         </div>
 
         <div className="batch-load-actions">
           <button onClick={openBatchFolderPicker} disabled={isDetecting || isBatchLoading}>
-            {isBatchLoading ? "Loading…" : "Choose folder"}
+            {isBatchLoading ? t("loading") : t("chooseFolder")}
           </button>
           <button
             className="secondary"
             onClick={openBatchFilePicker}
             disabled={isDetecting || isBatchLoading}
           >
-            Choose files…
+            {t("chooseFiles")}
           </button>
         </div>
 
@@ -1021,7 +1025,7 @@ export default function App() {
                   onClick={() => goToFile(currentFileIndex - 1)}
                   disabled={currentFileIndex === 0 || isBatchLoading || isDetecting}
                 >
-                  Previous file
+                  {t("previousFile")}
                 </button>
                 <div className="batch-file-indicator">
                   <strong>
@@ -1035,13 +1039,13 @@ export default function App() {
                   onClick={() => goToFile(currentFileIndex + 1)}
                   disabled={currentFileIndex >= batchFiles.length - 1 || isBatchLoading || isDetecting}
                 >
-                  Next file
+                  {t("nextFile")}
                 </button>
               </div>
 
               <div className="batch-jump-controls">
                 <form className="batch-jump-field" onSubmit={handleJumpToFileNumber}>
-                  <label htmlFor="batch-jump-number">Go to file #</label>
+                  <label htmlFor="batch-jump-number">{t("goToFileNumber")}</label>
                   <div className="batch-jump-row">
                     <input
                       id="batch-jump-number"
@@ -1053,20 +1057,20 @@ export default function App() {
                       disabled={isBatchLoading || isDetecting}
                     />
                     <button type="submit" disabled={isBatchLoading || isDetecting}>
-                      Go
+                      {t("batchGo")}
                     </button>
                   </div>
                 </form>
 
                 <form className="batch-jump-field" onSubmit={handleJumpToFileName}>
-                  <label htmlFor="batch-jump-name">Go to file name</label>
+                  <label htmlFor="batch-jump-name">{t("goToFileName")}</label>
                   <div className="batch-jump-row">
                     <input
                       id="batch-jump-name"
                       list="batch-file-list"
                       value={jumpFileName}
                       onChange={(event) => setJumpFileName(event.target.value)}
-                      placeholder="File name"
+                      placeholder={t("fileNamePlaceholder")}
                       disabled={isBatchLoading || isDetecting}
                     />
                     <datalist id="batch-file-list">
@@ -1077,7 +1081,7 @@ export default function App() {
                       ))}
                     </datalist>
                     <button type="submit" disabled={isBatchLoading || isDetecting}>
-                      Go
+                      {t("batchGo")}
                     </button>
                   </div>
                 </form>
@@ -1094,39 +1098,31 @@ export default function App() {
             disabled={isDetecting}
           />
           <span>
-            Auto-run default model when opening an unprocessed file
-            <small>Uses {backendDisplayLabel(nerBackend, customModelId)} for files without saved detections.</small>
+            {t("autoRunNer")}
+            <small>
+              {t("autoRunNerHint", { model: backendDisplayLabel(nerBackend, customModelId) })}
+            </small>
           </span>
         </label>
 
-        <p className="batch-output-note">
-          ZIP contents per file: <code>*-anonymized.txt</code>, <code>*-report.md</code>, and{" "}
-          <code>*-label-studio.json</code>, plus shared <code>label-studio-ner-config.xml</code>.
-          Files you leave during navigation are marked with a <code>_modified</code> suffix in the
-          archive.
-        </p>
+        <p className="batch-output-note">{t("batchOutputNote")}</p>
       </section>
 
       {error ? (
         <section className="error-card">
-          <strong>Something went wrong</strong>
+          <strong>{t("errorTitle")}</strong>
           <p>{error}</p>
-          <p>
-            Ensure you have a network connection for the first model download. ONNX weights are
-            cached in the browser afterward. NERmembert large uses full-precision weights (larger
-            download). If detection keeps failing, try reloading the page or switching to a CamemBERT
-            model.
-          </p>
+          <p>{t("errorHint")}</p>
         </section>
       ) : null}
 
       <section className="workspace">
         <div className="panel">
           <div className="panel-header">
-            <h2>{batchMode ? "1. Source Text" : "1. Paste Text"}</h2>
+            <h2>{batchMode ? t("panel1Batch") : t("panel1Single")}</h2>
             <span>
               {batchMode && currentFile ? `${currentFile.name} · ` : ""}
-              {text.length} characters
+              {t("characters", { count: text.length })}
             </span>
           </div>
           <textarea
@@ -1140,19 +1136,24 @@ export default function App() {
               setIsDemoMode(false);
               setEntityMenu(null);
             }}
-            placeholder="Paste interview transcript or field notes here..."
+            placeholder={t("textPlaceholder")}
           />
         </div>
 
         <div className="panel">
           <div className="panel-header">
-            <h2>2. Replace Categories?</h2>
+            <h2>{t("panel2Title")}</h2>
             <span>
               {isDemoMode
-                ? `${DEMO_MODEL_LABEL} — explore review tools; run detection on your own text when ready`
+                ? `${t("demoModelLabel")} — ${t("demoPanelHint")}`
                 : modelName
-                  ? `Model: ${modelName} (${backendDisplayLabel(nerBackend, customModelId)}) · click entities to toggle`
-                  : `Backend: ${backendDisplayLabel(nerBackend, customModelId)}`}
+                  ? t("modelLine", {
+                      model: modelName,
+                      backend: backendDisplayLabel(nerBackend, customModelId),
+                    })
+                  : t("backendLine", {
+                      backend: backendDisplayLabel(nerBackend, customModelId),
+                    })}
             </span>
           </div>
           <CategoryReview
@@ -1170,11 +1171,8 @@ export default function App() {
       <section className="preview-grid">
         <div className="panel">
           <div className="panel-header">
-            <h2>3. Highlighted Entities</h2>
-            <span>
-              {entities.length} spans · select text to add (all word matches by default) · click
-              highlight to remove
-            </span>
+            <h2>{t("panel3Title")}</h2>
+            <span>{t("panel3Hint", { count: entities.length })}</span>
           </div>
           <HighlightedText
             text={text}
@@ -1205,10 +1203,10 @@ export default function App() {
 
         <div className="panel">
           <div className="panel-header">
-            <h2>4. Anonymized Preview</h2>
-            <span>Selected categories only</span>
+            <h2>{t("panel4Title")}</h2>
+            <span>{t("panel4Subtitle")}</span>
           </div>
-          <pre className="text-preview">{anonymizedText || "Run detection to preview replacements."}</pre>
+          <pre className="text-preview">{anonymizedText || t("panel4Empty")}</pre>
         </div>
       </section>
 
@@ -1224,6 +1222,10 @@ export default function App() {
           onRemove={handleRemoveEntity}
           onClose={closeEntityMenu}
         />
+      ) : null}
+
+      {privacyDetailsOpen ? (
+        <PrivacyDetailsWindow onClose={() => setPrivacyDetailsOpen(false)} />
       ) : null}
 
       {reportOpen ? (

@@ -1,7 +1,9 @@
 import { useInstallPrompt } from "../hooks/useInstallPrompt.js";
+import { useUiLocale } from "../context/UiLocaleContext.jsx";
 
 export default function InstallAppBanner() {
   const { canInstall, installed, install } = useInstallPrompt();
+  const { t } = useUiLocale();
 
   if (installed) {
     return null;
@@ -11,14 +13,11 @@ export default function InstallAppBanner() {
     return (
       <section className="install-banner" aria-label="Install Incognito as an app">
         <div>
-          <strong>Install Incognito</strong>
-          <p>
-            Add a desktop shortcut that opens this app in its own window — no binary download,
-            same privacy-first text anonymization.
-          </p>
+          <strong>{t("installTitle")}</strong>
+          <p>{t("installBody")}</p>
         </div>
         <button type="button" className="install-banner-button" onClick={() => install()}>
-          Install app
+          {t("installButton")}
         </button>
       </section>
     );
@@ -27,11 +26,8 @@ export default function InstallAppBanner() {
   return (
     <section className="install-banner install-banner-hint" aria-label="Install Incognito as an app">
       <div>
-        <strong>Install as an app</strong>
-        <p>
-          In Chrome or Edge: menu → <em>Install Incognito</em> / <em>Apps → Install this site</em>.
-          On macOS you can keep it in the Dock like a native app.
-        </p>
+        <strong>{t("installHintTitle")}</strong>
+        <p>{t("installHintBody")}</p>
       </div>
     </section>
   );

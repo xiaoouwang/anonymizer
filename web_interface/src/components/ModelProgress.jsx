@@ -1,3 +1,5 @@
+import { useUiLocale } from "../context/UiLocaleContext.jsx";
+
 function resolveProgressPercent(item) {
   if (typeof item.progress === "number" && Number.isFinite(item.progress)) {
     if (item.progress > 0 && item.progress <= 1) {
@@ -27,6 +29,8 @@ function progressFileLabel(item) {
 }
 
 export default function ModelProgress({ progressItems, modelReady }) {
+  const { t } = useUiLocale();
+
   if (modelReady !== false && progressItems.length === 0) {
     return null;
   }
@@ -48,10 +52,8 @@ export default function ModelProgress({ progressItems, modelReady }) {
       <div className="model-progress-summary">
         <div className="model-progress-summary-header">
           <div>
-            <h2>Downloading model</h2>
-            <p className="model-progress-summary-note">
-              ONNX weights are cached in your browser after the first run.
-            </p>
+            <h2>{t("downloadingModel")}</h2>
+            <p className="model-progress-summary-note">{t("modelProgressNote")}</p>
           </div>
           <div className="model-progress-overall-value" aria-hidden="true">
             {isIndeterminate ? "…" : `${Math.round(overallPercent)}%`}

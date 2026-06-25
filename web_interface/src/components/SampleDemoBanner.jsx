@@ -1,17 +1,13 @@
-export default function SampleDemoBanner({ onRestore }) {
+import { useUiLocale } from "../context/UiLocaleContext.jsx";
+
+export default function SampleDemoBanner() {
+  const { t } = useUiLocale();
+
   return (
     <section className="demo-banner" aria-label="Sample demo">
       <p>
-        <strong>Sample demo loaded.</strong> This interview is already annotated so you can explore
-        category toggles, exclusions, manual edits, and exports — no model download needed yet.
-        Paste your own text or click <strong>Run Anonymization</strong> when you are ready (first
-        run downloads the detection model).
+        <strong>{t("sampleDemoBannerTitle")}</strong> {t("sampleDemoBanner")}
       </p>
-      {onRestore ? (
-        <button type="button" className="demo-banner-button secondary" onClick={onRestore}>
-          Restore sample demo
-        </button>
-      ) : null}
     </section>
   );
 }
