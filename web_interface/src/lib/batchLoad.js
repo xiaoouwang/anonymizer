@@ -36,15 +36,21 @@ function reportProgress(onProgress, phase, current, total, fileName) {
 }
 
 async function readEntriesWithProgress(entries, onProgress) {
+  if (!entries.length) {
+    reportProgress(onProgress, "loading", 0, 0, "");
+    return [];
+  }
+
   const files = [];
+  reportProgress(onProgress, "loading", 0, entries.length, entries[0].name);
 
   for (let index = 0; index < entries.length; index += 1) {
     const entry = entries[index];
-    reportProgress(onProgress, "loading", index + 1, entries.length, entry.name);
+    reportProgress(onProgress, "loading", index, entries.length, entry.name);
 
-    files.push(
-      await fileToBatchEntry(entry.file, entry.relativePath),
-    );
+    files.push(await fileToBatchEntry(entry.file, entry.relativePath));
+
+    reportProgress(onProgress, "loading", index + 1, entries.length, entry.name);
   }
 
   return sortBatchFiles(files);

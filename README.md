@@ -35,7 +35,7 @@ Développé par [Xiaoou Wang](https://xiaoouwang.github.io/) · Ingénieur en Hu
 ## 🚀 En bref
 
 1. **Importez** un texte, un dossier, ou des fichiers sélectionnés (`.txt`, `.docx` sur le web)
-2. **Lancez** la détection d'entités (NER) en un clic
+2. **Lancez l'anonymisation** — bouton *Run Anonymization* sur le web ; détection d'entités (NER) en un clic sur le bureau
 3. **Affinez** catégories et occurrences (personnes, lieux, organisations, dates, e-mails…)
 4. **Exportez** texte anonymisé, rapport et JSON Label Studio — dossier `outputs-YYYYMMDD-HHMMSS` (bureau) ou ZIP (web)
 
@@ -93,7 +93,7 @@ Même logique de revue et d'export — bureau ou navigateur, selon les besoins d
 
 **[Incognito Web](https://xiaoouwang.github.io/Incognito/)** — interface autonome pour anonymiser des corpus qualitatifs **dans le navigateur**. Aucun Electron, aucun Python : le NER s'exécute localement via [Transformers.js](https://huggingface.co/docs/transformers.js) et ONNX Runtime WASM.
 
-**Message clé pour les utilisateurs :** *Everything runs locally — your data never leaves your computer.* (affiché dans l'interface.)
+**Interface utilisateur :** texte d'exemple (entretien agronomique, Claire / Julien), bouton **Run Anonymization**, message *Everything runs locally — your data never leaves your computer.*
 
 👉 **[Essayer en ligne](https://xiaoouwang.github.io/Incognito/)** · [Code source](web_interface/) · [PWA](web_interface/README.md#install-as-an-app-pwa) · [Déploiement](web_interface/README.md#deploy-to-github-pages)
 
@@ -103,7 +103,7 @@ Même logique de revue et d'export — bureau ou navigateur, selon les besoins d
 | 🔒 **Confidentialité**        | Analyse dans le navigateur ; seul le modèle est téléchargé une fois     | 100 % local, hors ligne après installation du modèle  |
 | 🧠 **NER**                    | CamemBERT (+ dates), BERT anglais, modèle Hugging Face personnalisé     | spaCy (sm/lg) + CamemBERT                             |
 | 📁 **Mode lot**               | Dossier **ou** fichiers choisis (`.txt`, `.docx`) → revue → ZIP         | Dossier `.txt` → écriture dans `outputs-YYYYMMDD-HHMMSS/` |
-| 📊 **Progression**            | Barres visuelles (téléchargement modèle, chargement lot, NER lot)        | Statut texte dans l'interface                         |
+| 📊 **Progression**            | Barres visuelles (modèle, chargement lot, anonymisation lot ; comptage par fichier terminé) | Statut texte dans l'interface                         |
 | 🏷️ **Label Studio**           | Export JSON + config XML                                               | Idem + import lot                                     |
 | 💾 **Installation**           | URL ou **PWA** (Chrome / Edge) — voir [instructions](web_interface/README.md#install-as-an-app-pwa) | Installateurs macOS / Windows / Linux                 |
 
@@ -158,6 +158,16 @@ npm run dist:linux    # Linux
 Version allégée (spaCy seul, ~3× plus léger) : `npm run dist:mac:spacy` (idem `:win`, `:linux`).
 
 CI multi-plateforme : workflow **Release binaries** dans `.github/workflows/release.yml`.
+
+### Interface web (développement local)
+
+```bash
+cd web_interface
+npm install
+npm run dev
+```
+
+Voir [`web_interface/README.md`](web_interface/README.md) pour le mode lot, la PWA et le déploiement GitHub Pages.
 
 ### Branches Git (développement par plateforme)
 
@@ -263,8 +273,9 @@ Historique des évolutions fonctionnelles, avec date et fonctions concernées da
 - Liens croisés bureau ↔ web dans les deux interfaces.
 - **PWA** — installation depuis Chrome / Edge (`manifest.webmanifest`, `sw.js`).
 - **Confidentialité** — message visible : *Everything runs locally — your data never leaves your computer.*
-- **Mode lot web** — dossier entier ou fichiers choisis ; formats `.txt` et `.docx` (mammoth) ; barres de progression (modèle, chargement, NER).
+- **Mode lot web** — dossier entier ou fichiers choisis ; formats `.txt` et `.docx` (mammoth) ; barres de progression (modèle, chargement, anonymisation).
 - Composants : `ModelProgress`, `BatchJobProgress`, `InstallAppBanner`, `batchLoad.js`.
+- **UX web** — bouton *Run Anonymization*, texte d'exemple agronomique (`SAMPLE_TEXT`), navigation lot sur une ligne, correction barre de progression (fichier unique).
 
 ### 2026-06-24 — Mode lot, navigation et sorties
 

@@ -19,7 +19,7 @@ export default function CategoryReview({
   if (!categories.length) {
     return (
       <div className="empty-state">
-        Run NER or add entities manually in the highlighted view below.
+        Run anonymization or add entities manually in the highlighted view below.
       </div>
     );
   }

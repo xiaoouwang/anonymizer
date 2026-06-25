@@ -4,7 +4,7 @@ Standalone, **client-side** web interface for [Incognito](../README.md) — one 
 
 **Live demo:** [https://xiaoouwang.github.io/Incognito/](https://xiaoouwang.github.io/Incognito/)
 
-> **Everything runs locally — your data never leaves your computer.**  
+> **Everything runs locally — your data never leaves your computer.**
 > Your text is analyzed in the browser, not on a remote server. The only internet use is a one-time download of the detection model; your documents are never uploaded.
 
 ## Features
@@ -15,7 +15,7 @@ Standalone, **client-side** web interface for [Incognito](../README.md) — one 
 - **Audit report** — Markdown traceability with provenance (automatic vs manual)
 - **Label Studio export** — pre-annotations JSON + labeling config XML
 - **Batch processing** — choose a **whole folder** or **hand-picked files** (`.txt`, `.docx`); review each document; download a timestamped ZIP with anonymized text, reports, and Label Studio JSON
-- **Visible progress** — progress bars for model download and batch loading / NER
+- **Visible progress** — progress bars for model download, batch loading, and batch anonymization
 - **Installable PWA** — add to Dock / desktop from Chrome or Edge (no binary build)
 
 ## Quick start
@@ -28,16 +28,28 @@ npm run dev
 
 Open the URL shown in the terminal (typically http://127.0.0.1:5173).
 
-**First NER run:** the selected ONNX model downloads from Hugging Face (~100–400 MB depending on model) and is cached in the browser. A **progress bar** shows the download status.
+The app opens with a **sample French interview excerpt** (agronomy / field research — Claire and Julien). Click **Run Anonymization** to detect entities, review the highlights, then export or copy the anonymized text.
+
+**First run:** the selected ONNX model downloads from Hugging Face (~100–400 MB depending on model) and is cached in the browser. A **progress bar** shows the download status.
+
+## Using the app
+
+1. Paste or edit text, or load documents in **batch mode**.
+2. Choose a **NER model** (French CamemBERT + dates by default).
+3. Click **Run Anonymization** — entity detection runs locally in a Web Worker.
+4. Review categories and spans, adjust exclusions, add manual entities.
+5. Copy anonymized text, open the **audit report**, or **export to Label Studio**.
+
+> The button is labelled **Run Anonymization** (not “Run NER”) to match the user-facing goal; detection still uses ONNX NER under the hood.
 
 ## Batch processing
 
 1. **Choose folder** — load all supported `.txt` / `.docx` files in a directory (including subfolders).
 2. **Choose files…** — pick specific documents without importing the whole folder.
-3. Review each file (Previous / Next, jump by number or name).
-4. **Download batch ZIP** when review is complete.
+3. Review each file (Previous / Next, jump by number or name on the same row).
+4. **Download batch ZIP** when review is complete (`*-anonymized.txt`, `*-report.md`, `*-label-studio.json`).
 
-Progress bars show **document loading** and **batch NER** (`File 3 of 30`, current filename). Word `.doc` (legacy format) is not supported — use `.docx`.
+Progress bars show **document loading** and **batch detection** with completed-file counting (a single file stays at 0% until finished, then 100%). Word `.doc` (legacy format) is not supported — use `.docx`.
 
 ## Build for static hosting
 
@@ -62,7 +74,7 @@ This repo includes [`.github/workflows/deploy-web.yml`](../.github/workflows/dep
 
 4. To redeploy without changing code: **Actions → Deploy web interface → Run workflow**.
 
-`vite.config.js` uses `base: "./"` so asset paths work under the `/Incognito/` subpath. Users still need network access the first time they run NER so the browser can download model weights from Hugging Face.
+`vite.config.js` uses `base: "./"` so asset paths work under the `/Incognito/` subpath. Users still need network access the first time they run anonymization so the browser can download model weights from Hugging Face.
 
 ## Install as an app (PWA)
 
@@ -78,14 +90,14 @@ PWA files: `public/manifest.webmanifest`, `public/sw.js`, icons `pwa-192.png` / 
 
 ## Desktop vs web
 
-| Desktop (Electron) | Web |
-| --- | --- |
-| spaCy + CamemBERT (Python) | CamemBERT + BERT NER ONNX (Transformers.js) |
-| Batch: folder of `.txt` on disk | Batch: folder **or** selected `.txt` / `.docx` → ZIP download |
-| Writes batch outputs to disk | Downloads batch outputs as ZIP |
-| Label Studio batch anonymization | Not included (export only) |
-| Fully offline after model install | Requires network once per model for download |
-| Installers (.dmg, .exe, AppImage) | URL or **PWA** install (Chrome / Edge) |
+| Desktop (Electron)                | Web                                                           |
+| --------------------------------- | ------------------------------------------------------------- |
+| spaCy + CamemBERT (Python)        | CamemBERT + BERT NER ONNX (Transformers.js)                   |
+| Batch: folder of `.txt` on disk   | Batch: folder **or** selected `.txt` / `.docx` → ZIP download |
+| Writes batch outputs to disk      | Downloads batch outputs as ZIP                                |
+| Label Studio batch anonymization  | Not included (export only)                                    |
+| Fully offline after model install | Requires network once per model for download                  |
+| Installers (.dmg, .exe, AppImage) | URL or **PWA** install (Chrome / Edge)                        |
 
 ## Stack
 

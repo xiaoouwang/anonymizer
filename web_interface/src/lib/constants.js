@@ -1,10 +1,12 @@
-export const SAMPLE_TEXT = `Extrait d'entretien :
+export const SAMPLE_TEXT = `Claire, ingénieure agronome de formation, doctorat en écologie appliquée, travaille au sein d'un laboratoire commun entre INRAE et l'Université de Montpellier situé sur le campus de Baillarguet. Impliquée dans le projet AgroResilience depuis 2022. Recrutée comme chargée de recherche sur le volet analyse des systèmes agricoles afin d'évaluer les stratégies de réduction des intrants chimiques à l'échelle territoriale.
 
-La docteure Marie Dupont a rencontré Jean Martin à Paris le 12 mars 2022.
-Marie travaille avec l'Université de Lyon. Son email est marie.dupont@example.com.
-La participante a aussi mentionné +33 6 12 34 56 78 et https://example.org/project.
+Julien…
 
-Marie vient d'effectuer un stage de 3 mois à Paris, Hôpital Saint-Louis.`;
+Interviewé : 5 ans chez AgroNova, responsable expérimentation terrain sur les cultures maraîchères (tomate, courgette, poivron), puis coordinateur technique chez Floralis. Travaille avec des coopératives agricoles dans le sud de la France et en Espagne. Assure le suivi des itinéraires techniques et la traçabilité des interventions culturales depuis les semis jusqu'à la commercialisation des produits. Très forte diversité d'exploitations partenaires. Responsable d'une équipe de trois techniciens.
+
+En Andalousie, peu de problèmes sanitaires majeurs ces dernières années, mais forte pression hydrique. Cultures sous serre principalement. Certification GlobalG.A.P.
+
+À Perpignan, station expérimentale sur deux hectares consacrée aux essais de biocontrôle (aleurodes, thrips). Une partie de la production est valorisée auprès d'un réseau local de distributeurs spécialisés dans l'agriculture biologique.`;
 
 export const CATEGORY_LABELS = {
   person: "People",

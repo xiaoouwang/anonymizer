@@ -310,7 +310,7 @@ export default function App() {
         const file = files[index];
         setBatchJobProgress({
           phase: "detecting",
-          current: index + 1,
+          current: index,
           total: files.length,
           fileName: file.name,
         });
@@ -329,6 +329,13 @@ export default function App() {
           customCategories: {},
           outputsModified: false,
         };
+
+        setBatchJobProgress({
+          phase: "detecting",
+          current: index + 1,
+          total: files.length,
+          fileName: file.name,
+        });
       }
     } finally {
       setIsDetecting(false);
@@ -887,7 +894,7 @@ export default function App() {
           </label>
         ) : null}
         <button onClick={detectEntities} disabled={!text.trim() || isDetecting}>
-          {isDetecting ? "Detecting..." : "Run NER"}
+          {isDetecting ? "Anonymizing..." : "Run Anonymization"}
         </button>
         <button onClick={copyAnonymizedText} disabled={!entities.length}>
           Copy anonymized text
@@ -908,7 +915,7 @@ export default function App() {
             onClick={downloadAllBatchOutputs}
             disabled={isDownloadingZip || isDetecting}
           >
-            {isDownloadingZip ? "Building ZIP..." : "Download batch ZIP"}
+            {isDownloadingZip ? "Building ZIP..." : "Export anonymized data"}
           </button>
         ) : null}
         {batchMode ? (
