@@ -105,7 +105,7 @@ Même logique de revue et d'export — bureau ou navigateur, selon les besoins d
 | 💾 **Installation**           | Aucune — ouvrir l'URL                                                  | Installateurs macOS / Windows / Linux                 |
 
 
-Déployé sur **GitHub Pages** à chaque push sur `main` (workflow [`.github/workflows/deploy-web.yml`](.github/workflows/deploy-web.yml)).
+Déployé sur **GitHub Pages** à chaque push sur `main` qui modifie `web_interface/` (workflow [`.github/workflows/deploy-web.yml`](.github/workflows/deploy-web.yml) — les changements hors de ce dossier ne redéploient pas le site).
 
 ---
 
@@ -185,7 +185,7 @@ Toute modification doit être faite sur la branche correspondant à la plateform
 
 Si vous utilisez **Incognito** dans un article, un rapport, un protocole ou un jeu de données, merci de citer :
 
-> Wang, X. (2026). *Incognito* (Version 0.2.0) [Logiciel]. Maison des Sciences de l'Homme Sud-Est / Université Côte d'Azur. [https://github.com/xiaoouwang/Incognito](https://github.com/xiaoouwang/Incognito)
+> Wang, X. (2026). *Incognito: A privacy-first, cross-platform tool for reviewing and anonymizing qualitative texts in the social sciences* (Version 0.2.0) [Logiciel]. Maison des Sciences de l'Homme Sud-Est / Université Côte d'Azur. [https://github.com/xiaoouwang/Incognito](https://github.com/xiaoouwang/Incognito)
 
 **Clé LaTeX** — `wang2026incognito`
 
@@ -198,19 +198,18 @@ Si vous utilisez **Incognito** dans un article, un rapport, un protocole ou un j
 ```bibtex
 @software{wang2026incognito,
   author  = {Wang, Xiaoou},
-  title   = {Incognito},
+  title   = {{Incognito}: A privacy-first, cross-platform tool for reviewing and anonymizing qualitative texts in the social sciences},
   year    = {2026},
   version = {0.2.0},
   url     = {https://github.com/xiaoouwang/Incognito},
-  note    = {Privacy-first tool for reviewing and anonymizing sensitive entities,
-             with desktop (Electron + spaCy/CamemBERT) and browser (Transformers.js) interfaces.
+  note    = {Desktop (Electron + spaCy/CamemBERT) and browser (Transformers.js) interfaces.
              Maison des Sciences de l'Homme Sud-Est, Universit{\'e} C{\^o}te d'Azur}
 }
 ```
 
 **APA (7e éd.)**
 
-> Wang, X. (2026). *Incognito* (Version 0.2.0) [Computer software]. Maison des Sciences de l'Homme Sud-Est, Université Côte d'Azur. [https://github.com/xiaoouwang/Incognito](https://github.com/xiaoouwang/Incognito)
+> Wang, X. (2026). *Incognito: A privacy-first, cross-platform tool for reviewing and anonymizing qualitative texts in the social sciences* (Version 0.2.0) [Computer software]. Maison des Sciences de l'Homme Sud-Est, Université Côte d'Azur. [https://github.com/xiaoouwang/Incognito](https://github.com/xiaoouwang/Incognito)
 
 Un fichier `[CITATION.cff](CITATION.cff)` est aussi disponible pour l'onglet **Cite this repository** sur GitHub.
 

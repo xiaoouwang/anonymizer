@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: Incognito
+title: "Incognito: A privacy-first, cross-platform tool for reviewing and anonymizing qualitative texts in the social sciences"
 message: "If you use this software, please cite it as below."
 type: software
 authors:
@@ -10,11 +10,11 @@ authors:
 repository-code: "https://github.com/xiaoouwang/Incognito"
 url: "https://github.com/xiaoouwang/Incognito"
 abstract: >-
-  Privacy-first tool for reviewing and anonymizing sensitive entities in French
-  qualitative research text. Available as a cross-platform desktop application
-  (Electron, spaCy, CamemBERT) and as a client-side web interface
-  (Transformers.js ONNX in the browser). Interactive NER review, batch processing,
-  audit reports, and Label Studio export.
+  A privacy-first, cross-platform tool for reviewing and anonymizing qualitative
+  texts in the social sciences. Available as a desktop application (Electron,
+  spaCy, CamemBERT) and as a client-side web interface (Transformers.js ONNX in
+  the browser). Interactive NER review, batch processing, audit reports, and
+  Label Studio export.
 version: 0.2.0
 date-released: 2026-06-23
 keywords:

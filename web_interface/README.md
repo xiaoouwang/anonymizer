@@ -34,7 +34,7 @@ The `dist/` folder can be served by any static file host.
 
 ## Deploy to GitHub Pages
 
-This repo includes [`.github/workflows/deploy-web.yml`](../.github/workflows/deploy-web.yml), which builds `web_interface/` and publishes `dist/` on every push to `main`.
+This repo includes [`.github/workflows/deploy-web.yml`](../.github/workflows/deploy-web.yml), which builds `web_interface/` and publishes `dist/` when you push to `main` **and** the commit touches `web_interface/` (or the workflow file itself). Pushes that only change other parts of the repo do not trigger a redeploy.
 
 1. **Commit and push** the `web_interface/` folder (and the workflow file) to GitHub.
 2. In the repo on GitHub: **Settings → Pages → Build and deployment → Source** → choose **GitHub Actions**.

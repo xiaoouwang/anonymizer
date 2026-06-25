@@ -1,6 +1,7 @@
 name: Deploy web interface
 
 on:
+  # Runs only when web_interface/ or this workflow changes — not on every push to main.
   push:
     branches: [main]
     paths:
