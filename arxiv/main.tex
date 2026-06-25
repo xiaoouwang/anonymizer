@@ -20,7 +20,7 @@
 
 \title{%
   \textbf{Incognito:}\\[0.3em]
-  \large A Local-First, Cross-Platform Desktop Tool for\\
+  \large A Local-First, Cross-Platform Tool for\\
   Interactive Anonymization of French Qualitative Text
 }
 
@@ -47,14 +47,17 @@ Qualitative researchers in the social sciences and digital humanities routinely 
 sensitive interview transcripts, field notes, and open-ended survey responses.
 Cloud-based anonymization services raise legitimate concerns about data sovereignty,
 reproducibility, and compliance with ethics protocols.
-We present \textbf{Incognito}, a cross-platform desktop application
+We present \textbf{Incognito}, a cross-platform application
 developed at the Maison des Sciences de l'Homme Sud-Est (MSHS Sud-Est) that supports
 a \emph{human-in-the-loop} workflow for detecting and replacing named entities in
-French text entirely on the user's machine.
-The tool combines a React/Electron front end with a persistent local Python NER
+French text entirely on the user's machine or in the browser tab.
+The \textbf{desktop edition} combines a React/Electron front end with a persistent local Python NER
 service, offering three detection backends---spaCy (\texttt{fr\_core\_news\_sm},
 \texttt{fr\_core\_news\_lg}) and CamemBERT NER---plus rule-based detectors for
 emails, URLs, phone numbers, and dates.
+A complementary \textbf{web interface} (\texttt{web\_interface/}) runs the same review
+workflow client-side via Transformers.js and ONNX models (CamemBERT, English BERT, or
+custom Hugging Face checkpoints), deployed on GitHub Pages for installation-free access.
 Researchers review highlighted spans interactively, toggle replacement at the
 category or entity-value level, and export anonymized text with stable placeholders
 (e.g.\ \texttt{[PERSON\_1]}), markdown audit reports, and Label Studio
@@ -70,7 +73,7 @@ Source code, release binaries, and citation metadata are publicly available.
 \end{abstract}
 
 \noindent\textbf{Keywords:} anonymization, digital humanities, qualitative research,
-named entity recognition, French NLP, local-first software, research ethics
+named entity recognition, French NLP, local-first software, web application, research ethics
 
 \section{Introduction}
 \label{sec:introduction}
@@ -96,7 +99,7 @@ negatives, category-level policies (e.g.\ replace people but keep organization
 mentions), and batch processing aligned with project folder structures.
 
 \textbf{Incognito} addresses this gap as a research prototype and
-distribution-ready desktop application maintained in the context of research
+distribution-ready application (desktop installers and browser deployment) maintained in the context of research
 engineering at MSHS Sud-Est\footnote{\url{https://mshs.univ-cotedazur.fr/}}, the
 regional Maison des Sciences de l'Homme hosted by Universit\'{e} C\^{o}te d'Azur.
 The tool targets French-language qualitative corpora but is designed so that entity
@@ -112,7 +115,8 @@ Our design principles are:
   \item \textbf{Traceability:} audit reports listing category decisions and exact
         values replaced.
   \item \textbf{Cross-platform deployment:} the same workflow on macOS, Windows,
-        and Linux through Electron and platform-specific installers.
+        and Linux through Electron installers, or in any modern browser via the
+        web interface.
   \item \textbf{Reproducible packaging:} explicit build profiles separating a
         full bundle (spaCy + CamemBERT libraries) from a lighter spaCy-only
         distribution.
@@ -128,7 +132,8 @@ for indirect identifiers and contextual leaks.
 
 \subsection{Architecture}
 
-Incognito follows a two-process architecture (Figure~\ref{fig:architecture}).
+Incognito follows a two-process architecture for the desktop edition
+(Figure~\ref{fig:architecture}).
 The \emph{renderer} is an Electron\footnote{\url{https://www.electronjs.org/}} shell
 hosting a React interface built with Vite.
 The \emph{NER service} is a long-lived Python process exposing a line-oriented JSON
@@ -166,6 +171,17 @@ Released builds ship with a consistent application identity: logo in the integra
 title bar and window icon, plus in-app branding in the review header.
 A GitHub Actions workflow builds full standalone artifacts on
 \texttt{macos-latest}, \texttt{windows-latest}, and \texttt{ubuntu-latest}.
+
+\subsection{Web interface}
+
+The \texttt{web\_interface/} package is a React application built with Vite.
+NER inference runs in a dedicated Web Worker using Transformers.js and ONNX Runtime
+WASM; documents never leave the browser except for a one-time download of model
+weights from Hugging Face.
+It reuses the interactive review, audit report, Label Studio export, and batch
+folder workflow (ZIP download instead of live disk writes).
+The static build is published to GitHub Pages
+(\url{https://xiaoouwang.github.io/Incognito/}) via a dedicated CI workflow.
 
 \subsection{NER backends and entity categories}
 
@@ -224,7 +240,7 @@ Beyond on-screen preview, the tool generates:
 
 Command-line utilities in the repository support batch anonymization from Label
 Studio exports and folder-scale processing for headless workflows; the desktop
-application is the primary interactive path developed for MSHS Sud-Est researchers.
+and web applications are the primary interactive paths developed for MSHS Sud-Est researchers.
 
 \section{Workflow}
 \label{sec:workflow}
@@ -340,10 +356,16 @@ We plan:
 
 \paragraph{Software.}
 Source code, issue tracker, and citation metadata:
-\url{https://github.com/xiaoouwang/anonymizer}
+\url{https://github.com/xiaoouwang/Incognito}
+
+\paragraph{Web interface.}
+Browser deployment (no install):
+\url{https://xiaoouwang.github.io/Incognito/}
+Source in \texttt{web\_interface/}; built and published via
+\texttt{.github/workflows/deploy-web.yml}.
 
 \paragraph{Releases.}
-Standalone binaries (macOS DMG/ZIP for Apple Silicon and Intel, Windows installer,
+Standalone \textbf{desktop} binaries (macOS DMG/ZIP for Apple Silicon and Intel, Windows installer,
 Linux AppImage/DEB) are distributed via GitHub Releases.
 Build instructions support full (\texttt{npm run build:ner:full}) and spaCy-only
 (\texttt{npm run build:ner}) NER bundles; metadata in
@@ -357,7 +379,7 @@ Please cite this report and the software version used, e.g.:
 Wang, X. (2026).
 \textit{Incognito} (Version 0.2.0) [Computer software].
 Maison des Sciences de l'Homme Sud-Est, Universit\'{e} C\^{o}te d'Azur.
-\url{https://github.com/xiaoouwang/anonymizer}
+\url{https://github.com/xiaoouwang/Incognito}
 \end{quote}
 \noindent Bib\TeX{} key: \texttt{wang2026incognito}.
 A \texttt{CITATION.cff} file is provided for GitHub's citation widget.

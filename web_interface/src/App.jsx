@@ -739,6 +739,24 @@ export default function App() {
               Université Côte d&apos;Azur
             </a>
           </p>
+          <p className="credits">
+            🖥️ Need spaCy, offline installers? See the{" "}
+            <a
+              href="https://github.com/xiaoouwang/Incognito"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Incognito desktop app
+            </a>
+            {" · "}
+            <a
+              href="https://github.com/xiaoouwang/Incognito/releases"
+              target="_blank"
+              rel="noreferrer"
+            >
+              download releases
+            </a>
+          </p>
         </div>
         <aside className="privacy-note">
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -961,7 +979,7 @@ export default function App() {
           />
           <span>
             Auto-run default model when opening an unprocessed file
-              <small>Uses {backendDisplayLabel(nerBackend, customModelId)} for files without saved detections.</small>
+            <small>Uses {backendDisplayLabel(nerBackend, customModelId)} for files without saved detections.</small>
           </span>
         </label>
 

@@ -2,7 +2,7 @@
   "name": "incognito",
   "private": true,
   "version": "0.2.0",
-  "description": "Incognito — local Electron app for reviewing NER detections and anonymizing qualitative research text.",
+  "description": "Incognito — privacy-first qualitative text anonymization with desktop (Electron + spaCy/CamemBERT) and browser (Transformers.js) interfaces.",
   "author": {
     "name": "Xiaoou Wang",
     "email": "xiaoou.wang@univ-cotedazur.fr"

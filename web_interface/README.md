@@ -1,6 +1,6 @@
 # Incognito Web
 
-Standalone, **client-side** version of [Incognito](../README.md) for qualitative text anonymization. NER runs entirely in the browser via [Transformers.js](https://huggingface.co/docs/transformers.js) and ONNX Runtime WASM — no Python, no Electron, no server.
+Standalone, **client-side** web interface for [Incognito](../README.md) — one of two ways to anonymize qualitative text (alongside the desktop app). NER runs entirely in the browser via [Transformers.js](https://huggingface.co/docs/transformers.js) and ONNX Runtime WASM — no Python, no Electron, no server.
 
 ## Features
 
@@ -48,7 +48,7 @@ This repo includes [`.github/workflows/deploy-web.yml`](../.github/workflows/dep
 
 `vite.config.js` uses `base: "./"` so asset paths work under the `/Incognito/` subpath. Users still need network access the first time they run NER so the browser can download model weights from Hugging Face.
 
-## Differences from the desktop app
+## Desktop vs web
 
 | Desktop (Electron) | Web |
 | --- | --- |

@@ -1178,7 +1178,17 @@ export default function App() {
               <a href="https://univ-cotedazur.fr/" target="_blank" rel="noreferrer">
                 Université Côte d&apos;Azur
               </a>
-
+            </p>
+            <p className="credits">
+              🌐 Prefer no install? Try{" "}
+              <a
+                href="https://xiaoouwang.github.io/Incognito/"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Incognito Web
+              </a>
+              {" "}in your browser (CamemBERT / BERT ONNX via Transformers.js).
             </p>
           </div>
           <aside className="privacy-note">

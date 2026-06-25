@@ -4,11 +4,13 @@
 
 **Anonymisez vos corpus qualitatifs en local — sans envoyer vos données dans le cloud.**
 
-Application de bureau **multiplateforme** (macOS, Windows, Linux) pour les sciences humaines et sociales : entretiens, notes de terrain, réponses ouvertes. Détectez les entités sensibles, contrôlez ce qui est remplacé, exportez un texte anonymisé et une trace de vos décisions.
+Outil pour les sciences humaines et sociales — entretiens, notes de terrain, réponses ouvertes. **Deux interfaces** partagent le même workflow de revue : une **application de bureau** multiplateforme (macOS, Windows, Linux) et une **interface web** dans le navigateur. Détectez les entités sensibles, contrôlez ce qui est remplacé, exportez un texte anonymisé et une trace de vos décisions.
 
 Développé par [Xiaoou Wang](https://xiaoouwang.github.io/) · Ingénieur en Humanités Numériques · [MSHS Sud-Est](https://mshs.univ-cotedazur.fr/) · [Université Côte d'Azur](https://univ-cotedazur.fr/)
 
 **Version actuelle : 0.2.0**
+
+**🌐 Nouveau —** [**Incognito Web**](https://xiaoouwang.github.io/Incognito/) : même workflow de revue dans le navigateur, sans installation. Voir la section [Version web](#-version-web) ci-dessous.
 
 ![Demo](demo.gif)
 
@@ -19,8 +21,8 @@ Développé par [Xiaoou Wang](https://xiaoouwang.github.io/) · Ingénieur en Hu
 
 |                              |                                                                        |
 | ---------------------------- | ---------------------------------------------------------------------- |
-| 🏠 **100 % local**            | Aucun appel à une API externe. Vos textes restent sur votre machine.   |
-| 🌍 **Multiplateforme**        | Même workflow sur macOS, Windows et Linux — installateurs autonomes.   |
+| 🏠 **100 % local**            | Bureau : aucun appel à une API externe. Web : traitement dans l'onglet (seuls les poids du modèle sont téléchargés). |
+| 🌍 **Multiplateforme**        | Installateurs bureau macOS / Windows / Linux, ou **[Incognito Web](https://xiaoouwang.github.io/Incognito/)** dans le navigateur. |
 | 🇫🇷 **Pensé pour le français** | Modèles spaCy et CamemBERT adaptés aux textes qualitatifs en français. |
 | 👁️ **Contrôle humain**        | Vous validez, corrigez et désactivez entité par entité avant l'export. |
 | 📋 **Traçabilité**            | Rapport d'audit et exports prêts pour l'archivage ou Label Studio.     |
@@ -43,7 +45,9 @@ Placeholders stables du type `[PERSON_1]`, `[LOCATION_2]`, `[EMAIL_1]`.
 
 ## 🧰 Fonctionnalités
 
-- 🔍 **Trois moteurs NER** — spaCy (petit / grand) et CamemBERT
+Disponibles dans les **deux interfaces** (bureau et web), avec des moteurs NER adaptés à chaque plateforme :
+
+- 🔍 **NER configurable** — bureau : spaCy (petit / grand) et CamemBERT ; web : CamemBERT (+ dates), BERT anglais, modèle Hugging Face personnalisé
 - 🖍️ **Revue interactive** — surlignage, ajout/suppression de spans, bascule par entité, catégories personnalisées
 - 📁 **Mode lot** — traitement automatique de tout le dossier, navigation Précédent/Suivant, saut par n° ou nom de fichier
 - 📄 **Exports automatiques** — `*-anonymized.txt`, `*-report.md`, `*-label-studio.json` (variante `*_modified` après changement de fichier)
@@ -53,6 +57,10 @@ Placeholders stables du type `[PERSON_1]`, `[LOCATION_2]`, `[EMAIL_1]`.
 ---
 
 ## ⚙️ Stack & pipeline
+
+Incognito repose sur **deux déploiements** partageant la logique de revue (React) :
+
+### Application de bureau
 
 Interface **Electron** + **React** (Vite), moteur NER **Python** embarqué (PyInstaller), modèles **spaCy** et **CamemBERT** / Transformers. Chaîne de build **electron-builder** → installateurs `.dmg`, `.exe`, `.AppImage` / `.deb`, avec CI **GitHub Actions** pour les trois systèmes.
 
@@ -65,13 +73,45 @@ Interface **Electron** + **React** (Vite), moteur NER **Python** embarqué (PyIn
 | 🔄 CI      | GitHub Actions (`macos` / `windows` / `ubuntu`) |
 
 
-Même code, mêmes exports — quel que soit l'OS de l'équipe.
+### Interface web
+
+Interface **React** (Vite) + **Transformers.js** (ONNX dans un Web Worker), déployée sur **GitHub Pages**. Voir [`web_interface/`](web_interface/).
+
+
+| Couche   | Outils                                              |
+| -------- | --------------------------------------------------- |
+| 🌐 Web   | React, Vite, Transformers.js, ONNX Runtime WASM      |
+| 🧠 NER   | CamemBERT, BERT anglais, modèles ONNX personnalisés |
+| 📦 Release | `npm run build` → GitHub Actions (`deploy-web.yml`) |
+
+
+Même logique de revue et d'export — bureau ou navigateur, selon les besoins de l'équipe.
 
 ---
 
-## 💾 Téléchargement
+## 🌐 Version web
 
-🌍 **Cross-platform** — binaires autonomes pour **macOS**, **Windows** et **Linux** → [GitHub Releases](https://github.com/xiaoouwang/anonymizer/releases)
+**[Incognito Web](https://xiaoouwang.github.io/Incognito/)** — interface autonome pour anonymiser des corpus qualitatifs **dans le navigateur**. Aucun Electron, aucun Python : le NER s'exécute localement via [Transformers.js](https://huggingface.co/docs/transformers.js) et ONNX Runtime WASM.
+
+👉 **[Essayer en ligne](https://xiaoouwang.github.io/Incognito/)** · [Code source](web_interface/) · [Déploiement](web_interface/README.md#deploy-to-github-pages)
+
+
+|                              | Version web                                                            | Application de bureau (ci-dessous)                    |
+| ---------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------- |
+| 🔒 **Confidentialité**        | Texte traité dans l'onglet ; seuls les poids du modèle sont téléchargés | 100 % local, hors ligne après installation du modèle  |
+| 🧠 **NER**                    | CamemBERT (+ dates), BERT anglais, modèle Hugging Face personnalisé     | spaCy (sm/lg) + CamemBERT                             |
+| 📁 **Mode lot**               | Dossier → revue → ZIP à télécharger                                    | Écriture automatique dans `outputs-YYYYMMDD-HHMMSS/`  |
+| 🏷️ **Label Studio**           | Export JSON + config XML                                               | Idem + import lot                                     |
+| 💾 **Installation**           | Aucune — ouvrir l'URL                                                  | Installateurs macOS / Windows / Linux                 |
+
+
+Déployé sur **GitHub Pages** à chaque push sur `main` (workflow [`.github/workflows/deploy-web.yml`](.github/workflows/deploy-web.yml)).
+
+---
+
+## 💾 Téléchargement (application de bureau)
+
+🌍 **Cross-platform** — binaires autonomes pour **macOS**, **Windows** et **Linux** → [GitHub Releases](https://github.com/xiaoouwang/Incognito/releases)
 
 
 | Plateforme              | Fichier typique             |
@@ -91,8 +131,8 @@ Premier lancement CamemBERT : connexion internet une fois (~400 Mo, télécharge
 **Prérequis** — Node.js 20+, Python **3.12**
 
 ```bash
-git clone https://github.com/xiaoouwang/anonymizer.git
-cd anonymizer
+git clone https://github.com/xiaoouwang/Incognito.git
+cd Incognito
 npm install
 
 python3.12 -m venv .venv
@@ -145,7 +185,7 @@ Toute modification doit être faite sur la branche correspondant à la plateform
 
 Si vous utilisez **Incognito** dans un article, un rapport, un protocole ou un jeu de données, merci de citer :
 
-> Wang, X. (2026). *Incognito* (Version 0.2.0) [Logiciel]. Maison des Sciences de l'Homme Sud-Est / Université Côte d'Azur. [https://github.com/xiaoouwang/anonymizer](https://github.com/xiaoouwang/anonymizer)
+> Wang, X. (2026). *Incognito* (Version 0.2.0) [Logiciel]. Maison des Sciences de l'Homme Sud-Est / Université Côte d'Azur. [https://github.com/xiaoouwang/Incognito](https://github.com/xiaoouwang/Incognito)
 
 **Clé LaTeX** — `wang2026incognito`
 
@@ -161,15 +201,16 @@ Si vous utilisez **Incognito** dans un article, un rapport, un protocole ou un j
   title   = {Incognito},
   year    = {2026},
   version = {0.2.0},
-  url     = {https://github.com/xiaoouwang/anonymizer},
-  note    = {Privacy-first desktop application for reviewing and anonymizing sensitive entities.
+  url     = {https://github.com/xiaoouwang/Incognito},
+  note    = {Privacy-first tool for reviewing and anonymizing sensitive entities,
+             with desktop (Electron + spaCy/CamemBERT) and browser (Transformers.js) interfaces.
              Maison des Sciences de l'Homme Sud-Est, Universit{\'e} C{\^o}te d'Azur}
 }
 ```
 
 **APA (7e éd.)**
 
-> Wang, X. (2026). *Incognito* (Version 0.2.0) [Computer software]. Maison des Sciences de l'Homme Sud-Est, Université Côte d'Azur. [https://github.com/xiaoouwang/anonymizer](https://github.com/xiaoouwang/anonymizer)
+> Wang, X. (2026). *Incognito* (Version 0.2.0) [Computer software]. Maison des Sciences de l'Homme Sud-Est, Université Côte d'Azur. [https://github.com/xiaoouwang/Incognito](https://github.com/xiaoouwang/Incognito)
 
 Un fichier `[CITATION.cff](CITATION.cff)` est aussi disponible pour l'onglet **Cite this repository** sur GitHub.
 
@@ -212,6 +253,12 @@ Copyright remains with the original author. The AGPLv3 license grants users the 
 ## 📝 Mises à jour
 
 Historique des évolutions fonctionnelles, avec date et fonctions concernées dans le code.
+
+### 2026-06-25 — Interface web (Incognito = bureau + navigateur)
+
+- **Incognito** n'est plus limité au bureau : ajout de l'interface **[web_interface/](web_interface/)** — React + Vite + Transformers.js, revue interactive, rapport d'audit, export Label Studio, mode lot (ZIP).
+- Déploiement automatique sur **[GitHub Pages](https://xiaoouwang.github.io/Incognito/)** via `.github/workflows/deploy-web.yml`.
+- Liens croisés bureau ↔ web dans les deux interfaces.
 
 ### 2026-06-24 — Mode lot, navigation et sorties
 

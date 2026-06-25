@@ -2,7 +2,7 @@
   "name": "incognito-web",
   "private": true,
   "version": "0.1.0",
-  "description": "Incognito Web — client-side qualitative text anonymization with Transformers.js ONNX NER.",
+  "description": "Incognito Web — browser interface for qualitative text anonymization (Transformers.js ONNX NER), companion to the Incognito desktop app.",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
