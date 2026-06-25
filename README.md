@@ -93,7 +93,7 @@ Même logique de revue et d'export — bureau ou navigateur, selon les besoins d
 
 **[Incognito Web](https://xiaoouwang.github.io/Incognito/)** — interface autonome pour anonymiser des corpus qualitatifs **dans le navigateur**. Aucun Electron, aucun Python : le NER s'exécute localement via [Transformers.js](https://huggingface.co/docs/transformers.js) et ONNX Runtime WASM.
 
-**Interface utilisateur :** texte d'exemple (entretien agronomique, Claire / Julien), bouton **Run Anonymization**, message *Everything runs locally — your data never leaves your computer.*
+**Interface utilisateur :** démo préchargée (entretien agronomique, Claire / Julien) avec entités déjà détectées — exploration immédiate sans télécharger le modèle ; bouton **Run Anonymization** pour vos propres textes.
 
 👉 **[Essayer en ligne](https://xiaoouwang.github.io/Incognito/)** · [Code source](web_interface/) · [PWA](web_interface/README.md#install-as-an-app-pwa) · [Déploiement](web_interface/README.md#deploy-to-github-pages)
 
@@ -275,7 +275,7 @@ Historique des évolutions fonctionnelles, avec date et fonctions concernées da
 - **Confidentialité** — message visible : *Everything runs locally — your data never leaves your computer.*
 - **Mode lot web** — dossier entier ou fichiers choisis ; formats `.txt` et `.docx` (mammoth) ; barres de progression (modèle, chargement, anonymisation).
 - Composants : `ModelProgress`, `BatchJobProgress`, `InstallAppBanner`, `batchLoad.js`.
-- **UX web** — bouton *Run Anonymization*, texte d'exemple agronomique (`SAMPLE_TEXT`), navigation lot sur une ligne, correction barre de progression (fichier unique).
+- **UX web** — bouton *Run Anonymization*, démo préchargée (`sampleDemo.js`), texte d'exemple agronomique, navigation lot sur une ligne, correction barre de progression (fichier unique).
 
 ### 2026-06-24 — Mode lot, navigation et sorties
 

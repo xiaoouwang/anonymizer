@@ -28,19 +28,20 @@ npm run dev
 
 Open the URL shown in the terminal (typically http://127.0.0.1:5173).
 
-The app opens with a **sample French interview excerpt** (agronomy / field research — Claire and Julien). Click **Run Anonymization** to detect entities, review the highlights, then export or copy the anonymized text.
+The app opens with a **pre-loaded sample demo**: a French interview excerpt (Claire / Julien) with entities already detected — no model download required. Explore category toggles, exclusions, and manual edits immediately. Click **Run Anonymization** on your own text when ready.
 
 **First run:** the selected ONNX model downloads from Hugging Face (~100–400 MB depending on model) and is cached in the browser. A **progress bar** shows the download status.
 
 ## Using the app
 
-1. Paste or edit text, or load documents in **batch mode**.
-2. Choose a **NER model** (French CamemBERT + dates by default).
-3. Click **Run Anonymization** — entity detection runs locally in a Web Worker.
-4. Review categories and spans, adjust exclusions, add manual entities.
-5. Copy anonymized text, open the **audit report**, or **export to Label Studio**.
+1. On first open, a **pre-loaded demo** shows annotated sample text — explore the review panel without downloading a model.
+2. Paste or edit text, or load documents in **batch mode**.
+3. Choose a **NER model** (French CamemBERT + dates by default).
+4. Click **Run Anonymization** — entity detection runs locally in a Web Worker (first run downloads ONNX weights).
+5. Review categories and spans, adjust exclusions, add manual entities.
+6. Copy anonymized text, open the **audit report**, or **export to Label Studio**.
 
-> The button is labelled **Run Anonymization** (not “Run NER”) to match the user-facing goal; detection still uses ONNX NER under the hood.
+Precomputed demo data lives in `src/lib/sampleDemo.js`.
 
 ## Batch processing
 

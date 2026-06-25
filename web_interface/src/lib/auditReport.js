@@ -16,6 +16,10 @@ function formatProvenanceLabel(source) {
     return "Automatic detection (rule-based pattern)";
   }
 
+  if (source === "demo") {
+    return "Sample demo (preloaded)";
+  }
+
   return `Automatic detection (${source})`;
 }
 

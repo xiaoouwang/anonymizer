@@ -6,6 +6,7 @@ import HighlightedText from "./components/HighlightedText.jsx";
 import ModelProgress from "./components/ModelProgress.jsx";
 import BatchJobProgress from "./components/BatchJobProgress.jsx";
 import InstallAppBanner from "./components/InstallAppBanner.jsx";
+import SampleDemoBanner from "./components/SampleDemoBanner.jsx";
 import { useNerWorker } from "./hooks/useNerWorker.js";
 import { createLabelStudioExport } from "./labelStudioExport.js";
 import { createAuditReport } from "./lib/auditReport.js";
@@ -17,7 +18,8 @@ import {
   readDocumentsFromFilePicker,
   readDocumentsFromFolderInput,
 } from "./lib/batchLoad.js";
-import { NER_BACKENDS, SAMPLE_TEXT } from "./lib/constants.js";
+import { NER_BACKENDS } from "./lib/constants.js";
+import { buildSampleDemoState, DEMO_MODEL_LABEL } from "./lib/sampleDemo.js";
 import { backendDisplayLabel, CUSTOM_MODEL_EXAMPLE } from "./lib/modelRegistry.js";
 import {
   addEntitySpans,
@@ -47,13 +49,15 @@ export default function App() {
   const fileStatesRef = useRef({});
   const batchCustomCategoriesRef = useRef({});
   const entityMenuRef = useRef(null);
+  const initialDemo = buildSampleDemoState();
 
-  const [text, setText] = useState(SAMPLE_TEXT);
-  const [entities, setEntities] = useState([]);
-  const [modelName, setModelName] = useState(null);
+  const [text, setText] = useState(initialDemo.text);
+  const [entities, setEntities] = useState(initialDemo.entities);
+  const [modelName, setModelName] = useState(initialDemo.modelName);
+  const [isDemoMode, setIsDemoMode] = useState(true);
   const [nerBackend, setNerBackend] = useState("camembert-dates");
   const [customModelId, setCustomModelId] = useState(CUSTOM_MODEL_EXAMPLE);
-  const [selectedCategories, setSelectedCategories] = useState({});
+  const [selectedCategories, setSelectedCategories] = useState(initialDemo.selectedCategories);
   const [excludedEntityKeys, setExcludedEntityKeys] = useState({});
   const [reportOpen, setReportOpen] = useState(false);
   const [isDetecting, setIsDetecting] = useState(false);
@@ -70,7 +74,7 @@ export default function App() {
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
   const [autoRunNer, setAutoRunNer] = useState(true);
   const [status, setStatus] = useState(
-    "Paste or load your text, choose a model, then run detection. Everything stays on your computer.",
+    "Sample interview pre-loaded — explore the review panel below. Run Anonymization on your own text when ready (first run downloads the model).",
   );
   const [error, setError] = useState("");
   const [entityMenu, setEntityMenu] = useState(null);
@@ -256,6 +260,7 @@ export default function App() {
       setSelectedCategories(categorySelection);
       setExcludedEntityKeys({});
       setModelName(result.model);
+      setIsDemoMode(false);
 
       const uniqueCount = Object.values(
         normalized.reduce((groups, entity) => {
@@ -592,6 +597,23 @@ export default function App() {
     }
   }
 
+  function restoreSampleDemo() {
+    const demo = buildSampleDemoState();
+    setText(demo.text);
+    setEntities(demo.entities);
+    setSelectedCategories(demo.selectedCategories);
+    setExcludedEntityKeys(demo.excludedEntityKeys);
+    setModelName(demo.modelName);
+    setCustomCategories({});
+    setEntityMenu(null);
+    setReportOpen(false);
+    setError("");
+    setIsDemoMode(true);
+    setStatus(
+      "Sample demo restored — explore category toggles, exclusions, and manual edits.",
+    );
+  }
+
   async function exitBatchMode() {
     if (batchMode && currentFile) {
       persistCurrentFileState();
@@ -609,16 +631,8 @@ export default function App() {
     setBatchFiles([]);
     setCurrentFileIndex(0);
     setCurrentFileOutputsModified(false);
-    setText(SAMPLE_TEXT);
-    setEntities([]);
-    setSelectedCategories({});
-    setExcludedEntityKeys({});
-    setModelName(null);
-    setCustomCategories({});
-    setEntityMenu(null);
-    setReportOpen(false);
-    setStatus("Batch mode closed. Restored the sample text.");
-    setError("");
+    restoreSampleDemo();
+    setStatus("Batch mode closed. Restored the sample demo.");
   }
 
   async function clearSession() {
@@ -632,6 +646,7 @@ export default function App() {
     setSelectedCategories({});
     setExcludedEntityKeys({});
     setModelName(null);
+    setIsDemoMode(false);
     setReportOpen(false);
     setStatus("Session cleared.");
     setError("");
@@ -846,6 +861,8 @@ export default function App() {
 
       <InstallAppBanner />
 
+      {isDemoMode && !batchMode ? <SampleDemoBanner /> : null}
+
       <ModelProgress progressItems={progressItems} modelReady={modelReady} />
 
       <BatchJobProgress progress={batchJobProgress} />
@@ -858,12 +875,16 @@ export default function App() {
             onChange={(event) => {
               const nextBackend = event.target.value;
               setNerBackend(nextBackend);
-              setEntities([]);
-              setSelectedCategories({});
-              setExcludedEntityKeys({});
-              setModelName(null);
+              if (!isDemoMode) {
+                setEntities([]);
+                setSelectedCategories({});
+                setExcludedEntityKeys({});
+                setModelName(null);
+              }
               setStatus(
-                `Model set to ${backendDisplayLabel(nextBackend, customModelId)}. Run detection again.`,
+                isDemoMode
+                  ? `Model set to ${backendDisplayLabel(nextBackend, customModelId)}. Run Anonymization when you are ready.`
+                  : `Model set to ${backendDisplayLabel(nextBackend, customModelId)}. Run detection again.`,
               );
             }}
             disabled={isDetecting}
@@ -882,10 +903,12 @@ export default function App() {
               value={customModelId}
               onChange={(event) => {
                 setCustomModelId(event.target.value);
-                setEntities([]);
-                setSelectedCategories({});
-                setExcludedEntityKeys({});
-                setModelName(null);
+                if (!isDemoMode) {
+                  setEntities([]);
+                  setSelectedCategories({});
+                  setExcludedEntityKeys({});
+                  setModelName(null);
+                }
               }}
               placeholder={`e.g. ${CUSTOM_MODEL_EXAMPLE}`}
               spellCheck={false}
@@ -896,6 +919,11 @@ export default function App() {
         <button onClick={detectEntities} disabled={!text.trim() || isDetecting}>
           {isDetecting ? "Anonymizing..." : "Run Anonymization"}
         </button>
+        {!batchMode && !isDemoMode ? (
+          <button type="button" className="secondary" onClick={restoreSampleDemo}>
+            Load sample demo
+          </button>
+        ) : null}
         <button onClick={copyAnonymizedText} disabled={!entities.length}>
           Copy anonymized text
         </button>
@@ -1109,6 +1137,7 @@ export default function App() {
               setSelectedCategories({});
               setExcludedEntityKeys({});
               setModelName(null);
+              setIsDemoMode(false);
               setEntityMenu(null);
             }}
             placeholder="Paste interview transcript or field notes here..."
@@ -1119,9 +1148,11 @@ export default function App() {
           <div className="panel-header">
             <h2>2. Replace Categories?</h2>
             <span>
-              {modelName
-                ? `Model: ${modelName} (${backendDisplayLabel(nerBackend, customModelId)}) · click entities to toggle`
-                : `Backend: ${backendDisplayLabel(nerBackend, customModelId)}`}
+              {isDemoMode
+                ? `${DEMO_MODEL_LABEL} — explore review tools; run detection on your own text when ready`
+                : modelName
+                  ? `Model: ${modelName} (${backendDisplayLabel(nerBackend, customModelId)}) · click entities to toggle`
+                  : `Backend: ${backendDisplayLabel(nerBackend, customModelId)}`}
             </span>
           </div>
           <CategoryReview

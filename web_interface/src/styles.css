@@ -207,6 +207,31 @@ code {
   background: rgba(32, 58, 95, 0.04);
 }
 
+.demo-banner {
+  align-items: flex-start;
+  background: linear-gradient(135deg, rgba(196, 92, 38, 0.1), rgba(32, 58, 95, 0.06));
+  border: 1px solid rgba(196, 92, 38, 0.22);
+  border-radius: 0.85rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 0 0 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.demo-banner p {
+  color: #4b5563;
+  flex: 1;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.demo-banner-button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 h1,
 h2,
 p {
