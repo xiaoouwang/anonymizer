@@ -3,6 +3,7 @@ import {
   CATEGORY_LABELS,
   CATEGORY_PREFIXES,
 } from "./constants.js";
+import { mergeEntities } from "./ruleDetection.js";
 
 export function slugifyCategoryId(name) {
   const slug = name
@@ -179,7 +180,7 @@ export function normalizeEntities(entities, sourceText) {
   return split
     .map((entity, index) => ({
       ...entity,
-      id: entity.id || `ent-${entity.start}-${entity.end}-${index}`,
+      id: `ent-${entity.start}-${entity.end}-${index}`,
       key: `${entity.label}:${entity.text.toLocaleLowerCase()}:${entity.start}:${index}`,
     }))
     .filter((entity) => entity.text && entity.start < entity.end)
@@ -250,6 +251,47 @@ export function findAllOccurrenceRanges(text, searchText) {
   }
 
   return ranges;
+}
+
+/** Repeat each entity span for every matching value occurrence in the source text. */
+export function expandEntityValueOccurrences(text, entities) {
+  if (!text || !entities.length) {
+    return entities;
+  }
+
+  const expanded = [];
+
+  for (const entity of entities) {
+    const ranges = findAllOccurrenceRanges(text, entity.text);
+    if (!ranges.length) {
+      expanded.push(entity);
+      continue;
+    }
+
+    for (const range of ranges) {
+      expanded.push({
+        ...entity,
+        start: range.start,
+        end: range.end,
+        text: range.text,
+      });
+    }
+  }
+
+  return expanded;
+}
+
+/** Expand model spans to every matching occurrence, merge with rules, normalize. */
+export function finalizeDetectedEntities(text, entities) {
+  if (!entities?.length) {
+    return normalizeEntities([], text);
+  }
+
+  const ruleEntities = entities.filter((entity) => entity.source === "rule");
+  const modelEntities = entities.filter((entity) => entity.source !== "rule");
+  const expandedModel = expandEntityValueOccurrences(text, modelEntities);
+
+  return normalizeEntities(mergeEntities([...expandedModel, ...ruleEntities]), text);
 }
 
 export function removeEntityById(entities, entityId) {

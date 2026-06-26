@@ -42,6 +42,7 @@ import {
   inferCustomCategoriesFromEntities,
   isEntityActive,
   normalizeEntities,
+  finalizeDetectedEntities,
   removeEntityById,
   replaceSelectedCategories,
 } from "./lib/entityUtils.js";
@@ -263,7 +264,7 @@ export default function App() {
 
     try {
       const result = await detectEntitiesInWorker(textToAnalyze, backend, customModelId);
-      const normalized = normalizeEntities(result.entities || [], textToAnalyze);
+      const normalized = finalizeDetectedEntities(textToAnalyze, result.entities || []);
       const categorySelection = createCategorySelectionFromEntities(normalized);
 
       setEntities(normalized);
@@ -332,7 +333,7 @@ export default function App() {
         setStatus(`Detecting entities: ${index + 1} of ${files.length} — ${file.name}`);
 
         const result = await detectEntitiesInWorker(file.text, backend, customModelId);
-        const normalized = normalizeEntities(result.entities || [], file.text);
+        const normalized = finalizeDetectedEntities(file.text, result.entities || []);
         const categorySelection = createCategorySelectionFromEntities(normalized);
 
         fileStatesRef.current[file.id] = {

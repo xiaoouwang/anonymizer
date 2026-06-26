@@ -1,6 +1,9 @@
 import { pipeline, env } from "@huggingface/transformers";
 import { detectWithRules, mergeEntities } from "./lib/ruleDetection.js";
-import { splitEntitiesAtNewlines } from "./lib/entityUtils.js";
+import {
+  expandEntityValueOccurrences,
+  splitEntitiesAtNewlines,
+} from "./lib/entityUtils.js";
 import { mapRawTokenEntities } from "./lib/tokenAggregation.js";
 import { resolveModelId, resolvePipelineOptions } from "./lib/modelRegistry.js";
 
@@ -27,7 +30,8 @@ async function detectEntities(text, backend, customModelId, progressCallback) {
   const pipelineOptions = resolvePipelineOptions(backend);
   const ner = await NerPipelineManager.getInstance(modelId, pipelineOptions, progressCallback);
   const raw = await ner(text);
-  const modelEntities = mapRawTokenEntities(text, raw, modelId);
+  let modelEntities = mapRawTokenEntities(text, raw, modelId);
+  modelEntities = expandEntityValueOccurrences(text, modelEntities);
 
   let entities = [...modelEntities, ...detectWithRules(text)];
   entities = splitEntitiesAtNewlines(text, entities);

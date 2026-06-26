@@ -171,29 +171,46 @@ export function locateAggregatedEntity(text, words, searchFrom = 0) {
   );
 }
 
+export function locateAllAggregatedEntityOccurrences(text, words, searchFrom = 0) {
+  const occurrences = [];
+  let position = searchFrom;
+
+  while (position < text.length) {
+    const located = locateAggregatedEntity(text, words, position);
+    if (!located) {
+      break;
+    }
+
+    occurrences.push(located);
+    position = located.end > position ? located.end : position + 1;
+  }
+
+  return occurrences;
+}
+
 export function mapAggregatedEntities(text, aggregated, modelId) {
   const entities = [];
 
   for (const group of aggregated) {
-    const located = locateAggregatedEntity(text, group.words, 0);
-    if (!located) {
-      continue;
-    }
+    const label = mapEntityTypeToAppLabel(group.entityType);
+    const locatedList = locateAllAggregatedEntityOccurrences(text, group.words, 0);
 
-    const overlaps = entities.some(
-      (existing) => located.start < existing.end && located.end > existing.start,
-    );
-    if (overlaps) {
-      continue;
-    }
+    for (const located of locatedList) {
+      const overlaps = entities.some(
+        (existing) => located.start < existing.end && located.end > existing.start,
+      );
+      if (overlaps) {
+        continue;
+      }
 
-    entities.push({
-      text: located.text,
-      start: located.start,
-      end: located.end,
-      label: mapEntityTypeToAppLabel(group.entityType),
-      source: `onnx:${modelId}`,
-    });
+      entities.push({
+        text: located.text,
+        start: located.start,
+        end: located.end,
+        label,
+        source: `onnx:${modelId}`,
+      });
+    }
   }
 
   return entities.sort((left, right) => left.start - right.start || left.end - right.end);

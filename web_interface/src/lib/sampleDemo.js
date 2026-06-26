@@ -1,6 +1,7 @@
 import { SAMPLE_TEXT } from "./constants.js";
 import {
   createCategorySelectionFromEntities,
+  expandEntityValueOccurrences,
   normalizeEntities,
 } from "./entityUtils.js";
 
@@ -25,10 +26,9 @@ const DEMO_ENTITY_SPECS = [
 ];
 
 export function buildSampleDemoState() {
-  const entities = normalizeEntities(
-    DEMO_ENTITY_SPECS.map((entity) => ({ ...entity, source: "demo" })),
-    SAMPLE_TEXT,
-  );
+  const seeded = DEMO_ENTITY_SPECS.map((entity) => ({ ...entity, source: "demo" }));
+  const expanded = expandEntityValueOccurrences(SAMPLE_TEXT, seeded);
+  const entities = normalizeEntities(expanded, SAMPLE_TEXT);
 
   return {
     text: SAMPLE_TEXT,
