@@ -8,9 +8,9 @@ Outil pour les sciences humaines et sociales — entretiens, notes de terrain, r
 
 Développé par [Xiaoou Wang](https://xiaoouwang.github.io/) · Ingénieur en Humanités Numériques · [MSHS Sud-Est](https://mshs.univ-cotedazur.fr/) · [Université Côte d'Azur](https://univ-cotedazur.fr/)
 
-**Version actuelle : 0.3.0**
+**Version actuelle : 0.4.0** (interface web) · **0.3.0** (application de bureau — installateurs sur [Releases](https://github.com/xiaoouwang/Incognito/releases))
 
-**🌐 [Incognito Web](https://xiaoouwang.github.io/Incognito/)** — interface navigateur pour l'anonymisation de base : détection locale, relecture interactive, export. *Tout s'exécute localement — vos données ne quittent pas votre ordinateur.* Voir la section [Version web](#-version-web).
+**🌐 [Incognito Web](https://xiaoouwang.github.io/Incognito/)** — anonymisation **de base** (CamemBERT) et **avancée** (GLiNER, étiquettes personnalisées : santé, diplômes, fonctions, nationalité…). Détection locale, relecture interactive, export. *Tout s'exécute localement — vos données ne quittent pas votre ordinateur.* Voir la section [Version web](#-version-web).
 
 ![Demo](demo.gif)
 
@@ -39,13 +39,14 @@ Développé par [Xiaoou Wang](https://xiaoouwang.github.io/) · Ingénieur en Hu
 3. **Affinez** catégories et occurrences (personnes, lieux, organisations, dates, e-mails…)
 4. **Exportez** texte anonymisé, rapport et JSON Label Studio — dossier `outputs-YYYYMMDD-HHMMSS` (bureau) ou ZIP (web)
 
-Placeholders stables du type `[PERSON_1]`, `[PERSON_2]`, `[LOCATION_1]`, `[ORG_1]`, `[EMAIL_1]` — la **première personne distincte** devient `[PERSON_1]`, la suivante `[PERSON_2]`, etc. (même logique pour lieux, organisations, dates…).
+Placeholders stables du type `[PER_1]`, `[PER_2]`, `[LOC_1]`, `[ORG_1]`, `[EMA_1]` — trois lettres de catégorie + numéro ; la **première valeur distincte** d'une catégorie devient `_1`, la suivante `_2`, etc.
 
-> **v0.3.0 — anonymisation de base stabilisée** : détection → relecture → remplacement par libellés numérotés. Pas une garantie d'anonymat total ; relisez toujours avant diffusion.
+> **v0.4.0 (web)** — **anonymisation avancée** (GLiNER) : étiquettes fines au choix (santé, diplômes, nationalité…). **v0.3.0** — anonymisation de base (CamemBERT) stabilisée. Pas une garantie d'anonymat total ; relisez toujours avant diffusion.
 
 Disponibles dans les **deux interfaces** (bureau et web), avec des moteurs NER adaptés à chaque plateforme :
 
-- 🔍 **NER configurable** — bureau : spaCy (petit / grand) et CamemBERT ; web : CamemBERT (+ dates), BERT anglais, modèle Hugging Face personnalisé
+- 🔍 **NER configurable** — bureau : spaCy (petit / grand) et CamemBERT ; web : **anonymisation de base** (CamemBERT + dates, BERT anglais, modèle Hugging Face personnalisé) et **anonymisation avancée** (GLiNER multi-étiquettes, expérimental)
+- 📧 **Règles regex (web, mode avancé)** — e-mails, URL et numéros de téléphone détectés par expressions régulières (prioritaires sur GLiNER)
 - 🖍️ **Revue interactive** — surlignage, ajout/suppression de spans, bascule par entité, catégories personnalisées
 - 📁 **Mode lot** — bureau : dossier `.txt` sur disque ; web : **dossier entier** ou **fichiers choisis** (`.txt`, `.docx`), navigation Précédent/Suivant, saut par n° ou nom, barres de progression
 - 📄 **Exports automatiques** — `*-anonymized.txt`, `*-report.md`, `*-label-studio.json` (variante `*_modified` après changement de fichier)
@@ -78,8 +79,8 @@ Interface **React** (Vite) + **Transformers.js** (ONNX dans un Web Worker), dép
 
 | Couche   | Outils                                              |
 | -------- | --------------------------------------------------- |
-| 🌐 Web   | React, Vite, Transformers.js, ONNX Runtime WASM      |
-| 🧠 NER   | CamemBERT, BERT anglais, modèles ONNX personnalisés |
+| 🌐 Web   | React, Vite, Transformers.js, ONNX Runtime WASM, GLiNER (ONNX) |
+| 🧠 NER   | CamemBERT, BERT anglais, GLiNER multi-v2.1, modèles ONNX personnalisés |
 | 📦 Release | `npm run build` → GitHub Actions (`deploy-web.yml`) |
 
 
@@ -89,9 +90,16 @@ Même logique de revue et d'export — bureau ou navigateur, selon les besoins d
 
 ## 🌐 Version web
 
-**[Incognito Web](https://xiaoouwang.github.io/Incognito/)** — interface autonome pour anonymiser des corpus qualitatifs **dans le navigateur**. Aucun Electron, aucun Python : le NER s'exécute localement via [Transformers.js](https://huggingface.co/docs/transformers.js) et ONNX Runtime WASM.
+**[Incognito Web](https://xiaoouwang.github.io/Incognito/)** — interface autonome pour anonymiser des corpus qualitatifs **dans le navigateur**. Aucun Electron, aucun Python : le NER s'exécute localement via [Transformers.js](https://huggingface.co/docs/transformers.js) et ONNX Runtime WASM ; le mode **avancé** ajoute [GLiNER](https://github.com/urchade/GLiNER) (ONNX ~472 Mo, mis en cache après le premier téléchargement).
 
-**Interface utilisateur :** démo préchargée (entretien agronomique, Claire / Julien) avec entités déjà détectées — exploration immédiate sans télécharger le modèle ; bouton **Run Anonymization** pour vos propres textes.
+**Deux modes** (boutons *Basic anonymization* / *Advanced anonymization*) :
+
+| Mode | Moteur | Usage typique |
+| ---- | ------ | ------------- |
+| **De base** | CamemBERT (+ dates), BERT anglais, modèle custom | Personnes, lieux, organisations, dates — entretiens et notes de terrain en français |
+| **Avancé** (bêta) | GLiNER + regex (e-mail, URL, téléphone) | Protocoles plus fins : santé, diplômes, fonctions, nationalité, étiquettes personnalisées |
+
+**Interface :** démos préchargées pour chaque mode ; trois colonnes (catégories · texte surligné · aperçu anonymisé) ; défilement synchronisé entre surlignage et aperçu ; interface **FR/EN**.
 
 👉 **[Essayer en ligne](https://xiaoouwang.github.io/Incognito/)** · [Code source](web_interface/) · [Déploiement](web_interface/README.md#deploy-to-github-pages)
 
@@ -99,9 +107,9 @@ Même logique de revue et d'export — bureau ou navigateur, selon les besoins d
 |                              | Version web                                                            | Application de bureau (ci-dessous)                    |
 | ---------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------- |
 | 🔒 **Confidentialité**        | Analyse dans le navigateur ; seul le modèle est téléchargé une fois     | 100 % local, hors ligne après installation du modèle  |
-| 🧠 **NER**                    | CamemBERT (+ dates), BERT anglais, modèle Hugging Face personnalisé     | spaCy (sm/lg) + CamemBERT                             |
+| 🧠 **NER**                    | **De base :** CamemBERT (+ dates), BERT anglais, modèle HF custom. **Avancé :** GLiNER (étiquettes au choix) + regex e-mail / URL / téléphone | spaCy (sm/lg) + CamemBERT                             |
 | 📁 **Mode lot**               | Dossier **ou** fichiers choisis (`.txt`, `.docx`) → revue → ZIP         | Dossier `.txt` → écriture dans `outputs-YYYYMMDD-HHMMSS/` |
-| 📊 **Progression**            | Barres visuelles (modèle, chargement lot, anonymisation lot ; comptage par fichier terminé) | Statut texte dans l'interface                         |
+| 📊 **Progression**            | Barres visuelles (téléchargement modèle, segments GLiNER, chargement lot) | Statut texte dans l'interface                         |
 | 🏷️ **Label Studio**           | Export JSON + config XML                                               | Idem + import lot                                     |
 | 💾 **Installation**           | URL (navigateur) — aucun installateur requis                            | Installateurs macOS / Windows / Linux                 |
 
@@ -264,9 +272,18 @@ Copyright remains with the original author. The AGPLv3 license grants users the 
 
 Historique des évolutions fonctionnelles, avec date et fonctions concernées dans le code.
 
+### 2026-06-25 — v0.4.0 — Anonymisation avancée (GLiNER) et interface web
+
+- **Version 0.4.0 (web)** — bascule **Anonymisation de base** / **Anonymisation avancée** ; GLiNER pour des étiquettes fines (santé, diplômes, nationalité, fonctions…).
+- **Regex prioritaires** en mode avancé — e-mails, URL et numéros de téléphone (mêmes motifs que le bureau), sans passer par GLiNER.
+- **Placeholders courts** — préfixes à trois lettres (`[PER_1]`, `[LOC_1]`, `[NAT_1]`…).
+- **UX** — mise en page élargie, panneaux texte plus grands, défilement synchronisé surlignage / aperçu anonymisé, barre de progression GLiNER par segment.
+- **Composants** — `CamembertWorkflowSection`, `GlinerWorkflowSection`, `glinerRuntime.js`, `glinerSampleDemo.js`, démos Jean Dupont (GLiNER) et Claire/Julien (CamemBERT).
+- Déploiement : [GitHub Pages](https://xiaoouwang.github.io/Incognito/) · voir [`web_interface/README.md`](web_interface/README.md).
+
 ### 2026-06-25 — v0.3.0 — Anonymisation de base stabilisée (web)
 
-- **Version 0.3.0** — parcours d'**anonymisation de base** stabilisé : détection d'entités → relecture → remplacement par placeholders numérotés (`[PERSON_1]`, `[PERSON_2]`, `[LOCATION_1]`…).
+- **Version 0.3.0** — parcours d'**anonymisation de base** stabilisé : détection d'entités → relecture → remplacement par placeholders numérotés (`[PER_1]`, `[PER_2]`, `[LOC_1]`…).
 - **Interface web** prête pour un usage courant : démo préchargée, interface **FR/EN**, fenêtre *Détails ici* (confidentialité), mode lot, barres de progression.
 - **Détection** — expansion de toutes les occurrences d'une même entité dans le texte (`finalizeDetectedEntities`, `expandEntityValueOccurrences`).
 - Déploiement : [GitHub Pages](https://xiaoouwang.github.io/Incognito/) · voir [`web_interface/README.md`](web_interface/README.md).
