@@ -8,9 +8,9 @@ Outil pour les sciences humaines et sociales — entretiens, notes de terrain, r
 
 Développé par [Xiaoou Wang](https://xiaoouwang.github.io/) · Ingénieur en Humanités Numériques · [MSHS Sud-Est](https://mshs.univ-cotedazur.fr/) · [Université Côte d'Azur](https://univ-cotedazur.fr/)
 
-**Version actuelle : 0.2.0**
+**Version actuelle : 0.3.0**
 
-**🌐 Nouveau —** [**Incognito Web**](https://xiaoouwang.github.io/Incognito/) : même workflow de revue dans le navigateur, sans installation (ou en **PWA**). *Tout s'exécute localement — vos données ne quittent pas votre ordinateur.* Voir la section [Version web](#-version-web) ci-dessous.
+**🌐 [Incognito Web](https://xiaoouwang.github.io/Incognito/)** — interface navigateur pour l'anonymisation de base : détection locale, relecture interactive, export. *Tout s'exécute localement — vos données ne quittent pas votre ordinateur.* Voir la section [Version web](#-version-web).
 
 ![Demo](demo.gif)
 
@@ -39,11 +39,9 @@ Développé par [Xiaoou Wang](https://xiaoouwang.github.io/) · Ingénieur en Hu
 3. **Affinez** catégories et occurrences (personnes, lieux, organisations, dates, e-mails…)
 4. **Exportez** texte anonymisé, rapport et JSON Label Studio — dossier `outputs-YYYYMMDD-HHMMSS` (bureau) ou ZIP (web)
 
-Placeholders stables du type `[PERSON_1]`, `[LOCATION_2]`, `[EMAIL_1]`.
+Placeholders stables du type `[PERSON_1]`, `[PERSON_2]`, `[LOCATION_1]`, `[ORG_1]`, `[EMAIL_1]` — la **première personne distincte** devient `[PERSON_1]`, la suivante `[PERSON_2]`, etc. (même logique pour lieux, organisations, dates…).
 
----
-
-## 🧰 Fonctionnalités
+> **v0.3.0 — anonymisation de base stabilisée** : détection → relecture → remplacement par libellés numérotés. Pas une garantie d'anonymat total ; relisez toujours avant diffusion.
 
 Disponibles dans les **deux interfaces** (bureau et web), avec des moteurs NER adaptés à chaque plateforme :
 
@@ -95,7 +93,7 @@ Même logique de revue et d'export — bureau ou navigateur, selon les besoins d
 
 **Interface utilisateur :** démo préchargée (entretien agronomique, Claire / Julien) avec entités déjà détectées — exploration immédiate sans télécharger le modèle ; bouton **Run Anonymization** pour vos propres textes.
 
-👉 **[Essayer en ligne](https://xiaoouwang.github.io/Incognito/)** · [Code source](web_interface/) · [PWA](web_interface/README.md#install-as-an-app-pwa) · [Déploiement](web_interface/README.md#deploy-to-github-pages)
+👉 **[Essayer en ligne](https://xiaoouwang.github.io/Incognito/)** · [Code source](web_interface/) · [Déploiement](web_interface/README.md#deploy-to-github-pages)
 
 
 |                              | Version web                                                            | Application de bureau (ci-dessous)                    |
@@ -105,7 +103,7 @@ Même logique de revue et d'export — bureau ou navigateur, selon les besoins d
 | 📁 **Mode lot**               | Dossier **ou** fichiers choisis (`.txt`, `.docx`) → revue → ZIP         | Dossier `.txt` → écriture dans `outputs-YYYYMMDD-HHMMSS/` |
 | 📊 **Progression**            | Barres visuelles (modèle, chargement lot, anonymisation lot ; comptage par fichier terminé) | Statut texte dans l'interface                         |
 | 🏷️ **Label Studio**           | Export JSON + config XML                                               | Idem + import lot                                     |
-| 💾 **Installation**           | URL ou **PWA** (Chrome / Edge) — voir [instructions](web_interface/README.md#install-as-an-app-pwa) | Installateurs macOS / Windows / Linux                 |
+| 💾 **Installation**           | URL (navigateur) — aucun installateur requis                            | Installateurs macOS / Windows / Linux                 |
 
 
 Déployé sur **GitHub Pages** à chaque push sur `main` qui modifie `web_interface/` (workflow [`.github/workflows/deploy-web.yml`](.github/workflows/deploy-web.yml) — les changements hors de ce dossier ne redéploient pas le site).
@@ -119,10 +117,10 @@ Déployé sur **GitHub Pages** à chaque push sur `main` qui modifie `web_interf
 
 | Plateforme              | Fichier typique             |
 | ----------------------- | --------------------------- |
-| 🍎 macOS (Apple Silicon) | `Incognito-0.2.0-arm64.dmg` |
-| 🍎 macOS (Intel)         | `Incognito-0.2.0.dmg`       |
-| 🪟 Windows               | `Incognito Setup 0.2.0.exe` |
-| 🐧 Linux                 | `Incognito-0.2.0.AppImage`  |
+| 🍎 macOS (Apple Silicon) | `Incognito-0.3.0-arm64.dmg` |
+| 🍎 macOS (Intel)         | `Incognito-0.3.0.dmg`       |
+| 🪟 Windows               | `Incognito Setup 0.3.0.exe` |
+| 🐧 Linux                 | `Incognito-0.3.0.AppImage`  |
 
 
 Premier lancement CamemBERT : connexion internet une fois (~400 Mo, téléchargement du modèle Hugging Face).
@@ -171,7 +169,7 @@ Voir [`web_interface/README.md`](web_interface/README.md) pour le mode lot, la P
 
 ### Branches Git (développement par plateforme)
 
-À partir de la version **0.2.0**, la branche main est utilisée pour le développement sous MacOS.
+À partir de la version **0.3.0**, la branche `main` couvre le développement bureau (macOS) et l'interface web.
 
 
 | Branche   | Usage                                           |
@@ -198,7 +196,7 @@ Toute modification doit être faite sur la branche correspondant à la plateform
 
 Si vous utilisez **Incognito** dans un article, un rapport, un protocole ou un jeu de données, merci de citer :
 
-> Wang, X. (2026). *Incognito: A privacy-first, cross-platform tool for reviewing and anonymizing qualitative texts in the social sciences* (Version 0.2.0) [Logiciel]. Maison des Sciences de l'Homme Sud-Est / Université Côte d'Azur. [https://github.com/xiaoouwang/Incognito](https://github.com/xiaoouwang/Incognito)
+> Wang, X. (2026). *Incognito: A privacy-first, cross-platform tool for reviewing and anonymizing qualitative texts in the social sciences* (Version 0.3.0) [Logiciel]. Maison des Sciences de l'Homme Sud-Est / Université Côte d'Azur. [https://github.com/xiaoouwang/Incognito](https://github.com/xiaoouwang/Incognito)
 
 **Clé LaTeX** — `wang2026incognito`
 
@@ -213,7 +211,7 @@ Si vous utilisez **Incognito** dans un article, un rapport, un protocole ou un j
   author  = {Wang, Xiaoou},
   title   = {{Incognito}: A privacy-first, cross-platform tool for reviewing and anonymizing qualitative texts in the social sciences},
   year    = {2026},
-  version = {0.2.0},
+  version = {0.3.0},
   url     = {https://github.com/xiaoouwang/Incognito},
   note    = {Desktop (Electron + spaCy/CamemBERT) and browser (Transformers.js) interfaces.
              Maison des Sciences de l'Homme Sud-Est, Universit{\'e} C{\^o}te d'Azur}
@@ -222,7 +220,7 @@ Si vous utilisez **Incognito** dans un article, un rapport, un protocole ou un j
 
 **APA (7e éd.)**
 
-> Wang, X. (2026). *Incognito: A privacy-first, cross-platform tool for reviewing and anonymizing qualitative texts in the social sciences* (Version 0.2.0) [Computer software]. Maison des Sciences de l'Homme Sud-Est, Université Côte d'Azur. [https://github.com/xiaoouwang/Incognito](https://github.com/xiaoouwang/Incognito)
+> Wang, X. (2026). *Incognito: A privacy-first, cross-platform tool for reviewing and anonymizing qualitative texts in the social sciences* (Version 0.3.0) [Computer software]. Maison des Sciences de l'Homme Sud-Est, Université Côte d'Azur. [https://github.com/xiaoouwang/Incognito](https://github.com/xiaoouwang/Incognito)
 
 Un fichier `[CITATION.cff](CITATION.cff)` est aussi disponible pour l'onglet **Cite this repository** sur GitHub.
 
@@ -240,7 +238,7 @@ Les rapports d'audit peuvent contenir des valeurs sensibles : manipulez-les comm
 
 Copyright (c) 2026 Xiaoou Wang
 
-**Incognito** (v0.2.0) is free and open-source software released under the [GNU Affero General Public License v3.0 (AGPLv3)](LICENSE).
+**Incognito** (v0.3.0) is free and open-source software released under the [GNU Affero General Public License v3.0 (AGPLv3)](LICENSE).
 
 You are free to use, study, modify, and redistribute this software under the terms of the AGPLv3 license.
 
@@ -266,16 +264,23 @@ Copyright remains with the original author. The AGPLv3 license grants users the 
 
 Historique des évolutions fonctionnelles, avec date et fonctions concernées dans le code.
 
+### 2026-06-25 — v0.3.0 — Anonymisation de base stabilisée (web)
+
+- **Version 0.3.0** — parcours d'**anonymisation de base** stabilisé : détection d'entités → relecture → remplacement par placeholders numérotés (`[PERSON_1]`, `[PERSON_2]`, `[LOCATION_1]`…).
+- **Interface web** prête pour un usage courant : démo préchargée, interface **FR/EN**, fenêtre *Détails ici* (confidentialité), mode lot, barres de progression.
+- **Détection** — expansion de toutes les occurrences d'une même entité dans le texte (`finalizeDetectedEntities`, `expandEntityValueOccurrences`).
+- Déploiement : [GitHub Pages](https://xiaoouwang.github.io/Incognito/) · voir [`web_interface/README.md`](web_interface/README.md).
+
 ### 2026-06-25 — Interface web (Incognito = bureau + navigateur)
 
 - **Incognito** n'est plus limité au bureau : ajout de l'interface **[web_interface/](web_interface/)** — React + Vite + Transformers.js, revue interactive, rapport d'audit, export Label Studio, mode lot (ZIP).
 - Déploiement automatique sur **[GitHub Pages](https://xiaoouwang.github.io/Incognito/)** via `.github/workflows/deploy-web.yml`.
 - Liens croisés bureau ↔ web dans les deux interfaces.
-- **PWA** — installation depuis Chrome / Edge (`manifest.webmanifest`, `sw.js`).
+- **PWA** — manifeste et service worker (`manifest.webmanifest`, `sw.js`) pour mise en cache.
 - **Confidentialité** — message visible : *Everything runs locally — your data never leaves your computer.*
 - **Mode lot web** — dossier entier ou fichiers choisis ; formats `.txt` et `.docx` (mammoth) ; barres de progression (modèle, chargement, anonymisation).
-- Composants : `ModelProgress`, `BatchJobProgress`, `InstallAppBanner`, `batchLoad.js`.
-- **UX web** — bouton *Run Anonymization*, démo préchargée (`sampleDemo.js`), texte d'exemple agronomique, navigation lot sur une ligne, correction barre de progression (fichier unique).
+- Composants : `ModelProgress`, `BatchJobProgress`, `batchLoad.js`, `sampleDemo.js`, `PrivacyDetailsWindow`, `uiStrings.js`.
+- **UX web** — bouton *Run Anonymization*, démo préchargée, navigation lot sur une ligne, correction barre de progression (fichier unique).
 
 ### 2026-06-24 — Mode lot, navigation et sorties
 

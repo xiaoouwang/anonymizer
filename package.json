@@ -1,7 +1,7 @@
 {
   "name": "incognito",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Incognito — privacy-first qualitative text anonymization with desktop (Electron + spaCy/CamemBERT) and browser (Transformers.js) interfaces.",
   "author": {
     "name": "Xiaoou Wang",

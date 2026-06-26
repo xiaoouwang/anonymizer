@@ -15,8 +15,8 @@ abstract: >-
   spaCy, CamemBERT) and as a client-side web interface (Transformers.js ONNX in
   the browser). Interactive NER review, batch processing, audit reports, and
   Label Studio export.
-version: 0.2.0
-date-released: 2026-06-23
+version: 0.3.0
+date-released: 2026-06-25
 keywords:
   - anonymization
   - digital humanities

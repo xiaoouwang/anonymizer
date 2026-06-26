@@ -1,22 +1,36 @@
 # Incognito Web
 
-Standalone, **client-side** web interface for [Incognito](../README.md) — one of two ways to anonymize qualitative text (alongside the desktop app). NER runs entirely in the browser via [Transformers.js](https://huggingface.co/docs/transformers.js) and ONNX Runtime WASM — no Python, no Electron, no server.
+**Version 0.3.0** — standalone, **client-side** web interface for [Incognito](../README.md). One of two ways to anonymize qualitative text (alongside the desktop app). NER runs entirely in the browser via [Transformers.js](https://huggingface.co/docs/transformers.js) and ONNX Runtime WASM — no Python, no Electron, no server.
 
-**Live demo:** [https://xiaoouwang.github.io/Incognito/](https://xiaoouwang.github.io/Incognito/)
+**Live app:** [https://xiaoouwang.github.io/Incognito/](https://xiaoouwang.github.io/Incognito/)
 
 > **Everything runs locally — your data never leaves your computer.**
 > Your text is analyzed in the browser, not on a remote server. The only internet use is a one-time download of the detection model; your documents are never uploaded.
+
+## What “basic anonymization” means (v0.3.0)
+
+Incognito **0.3.0** stabilizes a straightforward workflow for qualitative researchers:
+
+1. **Detect** people, places, organisations, dates, emails, etc.
+2. **Review** — toggle categories, exclude specific values, add or remove spans.
+3. **Replace** with stable numbered placeholders:
+   - first distinct person → `[PERSON_1]`, second → `[PERSON_2]`, …
+   - same pattern for locations (`[LOCATION_1]`), organisations (`[ORG_1]`), dates, emails, …
+
+This is **basic anonymization** — consistent relabelling, not a guarantee of full anonymization. Always read the output before sharing or archiving.
 
 ## Features
 
 - **ONNX NER** — French: CamemBERT + dates (default) or CamemBERT base; English: BERT NER; or any Hugging Face `token-classification` model with ONNX weights (custom)
 - **Rule-based detection** — emails, URLs, dates, phone numbers (same patterns as the desktop app)
+- **All occurrences** — each detected name/place is expanded to every matching occurrence in the document
+- **Pre-loaded demo** — sample interview with entities ready to explore (no model download required on first open)
 - **Interactive review** — category toggles, per-value exclusion, manual span add/remove, custom categories
 - **Audit report** — Markdown traceability with provenance (automatic vs manual)
 - **Label Studio export** — pre-annotations JSON + labeling config XML
-- **Batch processing** — choose a **whole folder** or **hand-picked files** (`.txt`, `.docx`); review each document; download a timestamped ZIP with anonymized text, reports, and Label Studio JSON
+- **Batch processing** — choose a **whole folder** or **hand-picked files** (`.txt`, `.docx`); review each document; download a timestamped ZIP
 - **Visible progress** — progress bars for model download, batch loading, and batch anonymization
-- **Installable PWA** — add to Dock / desktop from Chrome or Edge (no binary build)
+- **UI in English or French** — language toggle next to the title (category names and audit report body stay in English)
 
 ## Quick start
 
@@ -28,20 +42,20 @@ npm run dev
 
 Open the URL shown in the terminal (typically http://127.0.0.1:5173).
 
-The app opens with a **pre-loaded sample demo**: a French interview excerpt (Claire / Julien) with entities already detected — no model download required. Explore category toggles, exclusions, and manual edits immediately. Click **Run Anonymization** on your own text when ready.
+The app opens with a **pre-loaded sample demo**: a French interview excerpt (Claire / Julien) with entities already detected. Explore category toggles, exclusions, and manual edits immediately. Click **Run Anonymization** on your own text when ready.
 
 **First run:** the selected ONNX model downloads from Hugging Face (~100–400 MB depending on model) and is cached in the browser. A **progress bar** shows the download status.
 
 ## Using the app
 
-1. On first open, a **pre-loaded demo** shows annotated sample text — explore the review panel without downloading a model.
+1. On first open, explore the **pre-loaded demo** in the review panel (no model required).
 2. Paste or edit text, or load documents in **batch mode**.
 3. Choose a **NER model** (French CamemBERT + dates by default).
-4. Click **Run Anonymization** — entity detection runs locally in a Web Worker (first run downloads ONNX weights).
-5. Review categories and spans, adjust exclusions, add manual entities.
+4. Click **Run Anonymization** — detection runs locally in a Web Worker.
+5. Review categories and spans; each unique person becomes `[PERSON_1]`, `[PERSON_2]`, etc. when exported.
 6. Copy anonymized text, open the **audit report**, or **export to Label Studio**.
 
-Precomputed demo data lives in `src/lib/sampleDemo.js`.
+Precomputed demo data: `src/lib/sampleDemo.js` · detection post-processing: `src/lib/entityUtils.js` (`finalizeDetectedEntities`).
 
 ## Batch processing
 
@@ -50,7 +64,7 @@ Precomputed demo data lives in `src/lib/sampleDemo.js`.
 3. Review each file (Previous / Next, jump by number or name on the same row).
 4. **Download batch ZIP** when review is complete (`*-anonymized.txt`, `*-report.md`, `*-label-studio.json`).
 
-Progress bars show **document loading** and **batch detection** with completed-file counting (a single file stays at 0% until finished, then 100%). Word `.doc` (legacy format) is not supported — use `.docx`.
+Progress bars show **document loading** and **batch detection** with completed-file counting. Word `.doc` (legacy format) is not supported — use `.docx`.
 
 ## Build for static hosting
 
@@ -63,31 +77,15 @@ The `dist/` folder can be served by any static file host.
 
 ## Deploy to GitHub Pages
 
-This repo includes [`.github/workflows/deploy-web.yml`](../.github/workflows/deploy-web.yml), which builds `web_interface/` and publishes `dist/` when you push to `main` **and** the commit touches `web_interface/` (or the workflow file itself). Pushes that only change other parts of the repo do not trigger a redeploy.
+This repo includes [`.github/workflows/deploy-web.yml`](../.github/workflows/deploy-web.yml), which builds `web_interface/` and publishes `dist/` when you push to `main` **and** the commit touches `web_interface/` (or the workflow file itself).
 
 1. **Commit and push** the `web_interface/` folder (and the workflow file) to GitHub.
 2. In the repo on GitHub: **Settings → Pages → Build and deployment → Source** → choose **GitHub Actions**.
-3. After the first successful workflow run, the site is live at:
-
-   **https://xiaoouwang.github.io/Incognito/**
-
-   (Project Pages URL: `https://<username>.github.io/<repo-name>/` — for this repo, [xiaoouwang/Incognito](https://github.com/xiaoouwang/Incognito).)
+3. After the first successful workflow run, the site is live at **https://xiaoouwang.github.io/Incognito/**
 
 4. To redeploy without changing code: **Actions → Deploy web interface → Run workflow**.
 
-`vite.config.js` uses `base: "./"` so asset paths work under the `/Incognito/` subpath. Users still need network access the first time they run anonymization so the browser can download model weights from Hugging Face.
-
-## Install as an app (PWA)
-
-Incognito is a **Progressive Web App**. After opening the live site:
-
-1. **Chrome / Edge** — click **Install app** in the banner, or use the browser menu → *Install Incognito* / *Apps → Install this site*.
-2. **macOS** — the installed app can live in the Dock like a native program.
-3. **Safari** — limited PWA support; use Chrome or Edge for the best install experience.
-
-No `.dmg`, `.exe`, or release binary is required — the installed app loads the same client-side site in a standalone window.
-
-PWA files: `public/manifest.webmanifest`, `public/sw.js`, icons `pwa-192.png` / `pwa-512.png`.
+`vite.config.js` uses `base: "./"` so asset paths work under the `/Incognito/` subpath.
 
 ## Desktop vs web
 
@@ -98,7 +96,7 @@ PWA files: `public/manifest.webmanifest`, `public/sw.js`, icons `pwa-192.png` / 
 | Writes batch outputs to disk      | Downloads batch outputs as ZIP                                |
 | Label Studio batch anonymization  | Not included (export only)                                    |
 | Fully offline after model install | Requires network once per model for download                  |
-| Installers (.dmg, .exe, AppImage) | URL or **PWA** install (Chrome / Edge)                        |
+| Installers (.dmg, .exe, AppImage) | Browser URL — no installer                                    |
 
 ## Stack
 
